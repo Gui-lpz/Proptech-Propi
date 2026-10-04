@@ -1,4 +1,4 @@
-# Laboratorio 6 - ExpresoFast
+# Proyecto Base de datos
 
 ## Universidad de Costa Rica
 **Sede del Atlántico - Recinto Paraíso**  
