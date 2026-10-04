@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propi Facturación</title>
+    <link rel="stylesheet" href="./styles.css">
+</head>
+
+<body>
+<header class="topbar">
+    <div class="topbar-izquierda">
+        <button
+            type="button"
+            id="menuToggle"
+            class="menu-toggle"
+            aria-label="Abrir o cerrar menú"
+            aria-expanded="true"
+        >
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <div class="marca">
+            <div class="logo">P</div>
+            <div class="marca-texto">
+                <h1>Proptech Propi</h1>
+                <p>Sistema de Gestión de Facturación</p>
+            </div>
+        </div>
+    </div>
+
+    <nav class="usuario-nav">
+        <div class="usuario-info">
+            <span>Usuario</span>
+            <strong id="usuarioActual"></strong>
+        </div>
+        <button type="button" class="btn-logout" onclick="cerrarSesion()">Cerrar sesión</button>
+    </nav>
+</header>
+
+<main class="layout">
+
+    <aside class="menu" id="menuLateral">
+        <div class="menu-titulo">
+            <span class="menu-punto"></span>
+            <h3>Menú principal</h3>
+        </div>
+
+        <button type="button" class="menu-btn activo" data-seccion="clientes">
+            <span class="menu-icono">C</span>
+            <span class="menu-texto">Clientes</span>
+        </button>
+
+        <button type="button" class="menu-btn" data-seccion="cabys">
+            <span class="menu-icono">B</span>
+            <span class="menu-texto">CABYS</span>
+        </button>
+
+        <button type="button" class="menu-btn" data-seccion="productos">
+            <span class="menu-icono">P</span>
+            <span class="menu-texto">Productos / Servicios</span>
+        </button>
+
+        <button type="button" class="menu-btn" data-seccion="impuestos">
+            <span class="menu-icono">%</span>
+            <span class="menu-texto">Tipos de impuesto</span>
+        </button>
+
+        <button type="button" class="menu-btn" data-seccion="facturas">
+            <span class="menu-icono">F</span>
+            <span class="menu-texto">Facturas</span>
+        </button>
+
+        <button type="button" class="menu-btn" data-seccion="notas">
+            <span class="menu-icono">N</span>
+            <span class="menu-texto">Notas crédito / débito</span>
+        </button>
+
+        <button type="button" class="menu-btn" data-seccion="reportes">
+            <span class="menu-icono">R</span>
+            <span class="menu-texto">Reportes</span>
+        </button>
+
+        <div class="menu-decoracion" aria-hidden="true"></div>
+    </aside>
+
+    <button type="button" id="menuOverlay" class="menu-overlay" aria-label="Cerrar menú"></button>
+
+    <section class="contenido">
+
+        <!-- CLIENTES - CRUD -->
+        <section id="clientes" class="panel">
+            <div class="panel-header">
+                <p class="panel-etiqueta">CRUD</p>
+                <h2>Clientes</h2>
+                <p class="panel-descripcion">Crear, consultar, modificar y eliminar clientes.</p>
+            </div>
+
+            <form id="clienteForm" class="form-clientes">
+                <input type="hidden" id="clienteId">
+
+                <div class="campo">
+                    <label for="tipoIdentificacion">Tipo de identificación <span class="requerido">*</span></label>
+                    <select id="tipoIdentificacion" required>
+                        <option value="">Seleccione...</option>
+                        <option value="01">01 - Cédula Física</option>
+                        <option value="02">02 - Cédula Jurídica</option>
+                        <option value="03">03 - DIMEX</option>
+                        <option value="04">04 - NITE</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label for="numeroIdentificacion">Número de identificación <span class="requerido">*</span></label>
+                    <input id="numeroIdentificacion" type="text" required>
+                </div>
+
+                <div class="campo">
+                    <label for="nombre">Nombre completo <span class="requerido">*</span></label>
+                    <input id="nombre" type="text" required>
+                </div>
+
+                <div class="campo campo-doble">
+                    <label for="actividadEconomicaId">Actividad económica <span class="requerido">*</span></label>
+                    <select id="actividadEconomicaId" required>
+                        <option value="">Seleccione actividad económica...</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label for="profesionOficio">Profesión u oficio</label>
+                    <input id="profesionOficio" type="text">
+                </div>
+
+                <div class="campo">
+                    <label for="correoElectronico">Correo electrónico</label>
+                    <input id="correoElectronico" type="email">
+                </div>
+
+                <div class="campo">
+                    <label for="telefono">Teléfono</label>
+                    <input id="telefono" type="tel">
+                </div>
+
+                <div class="separador campo-ancho"><span>Dirección</span></div>
+
+                <div class="campo">
+                    <label for="provincia">Provincia <span class="requerido">*</span></label>
+                    <select id="provincia" required>
+                        <option value="">Seleccione provincia...</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label for="canton">Cantón <span class="requerido">*</span></label>
+                    <select id="canton" required disabled>
+                        <option value="">Seleccione cantón...</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label for="distrito">Distrito <span class="requerido">*</span></label>
+                    <select id="distrito" required disabled>
+                        <option value="">Seleccione distrito...</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label for="barrio">Barrio</label>
+                    <input id="barrio" type="text">
+                </div>
+
+                <div class="campo campo-doble">
+                    <label for="otrasSenas">Otras señas</label>
+                    <textarea id="otrasSenas" rows="3" placeholder="Residencial, número de casa, referencias..."></textarea>
+                </div>
+
+                <div class="campo">
+                    <label for="estado">Estado</label>
+                    <select id="estado">
+                        <option value="A">Activo</option>
+                        <option value="I">Inactivo</option>
+                    </select>
+                </div>
+
+                <div class="acciones-form campo-ancho">
+                    <button type="submit" class="btn-principal" id="btnGuardarCliente">Guardar cliente</button>
+                    <button type="button" class="btn-cancelar" id="btnCancelarCliente">Cancelar</button>
+                </div>
+            </form>
+
+            <div class="separador campo-ancho"><span>Clientes registrados</span></div>
+            <div id="tablaClientes" class="tabla-contenedor"></div>
+        </section>
+
+        <!-- CABYS - CRUD-->
+        <section id="cabys" class="panel oculto">
+            <div class="panel-header">
+                <p class="panel-etiqueta">CRUD</p>
+                <h2>Códigos CABYS</h2>
+                <p class="panel-descripcion">Catálogo de bienes y servicios utilizados por la empresa.</p>
+            </div>
+
+            <form id="cabysForm" class="form-grid">
+                <input type="hidden" id="cabysCrudId">
+
+                <div class="campo">
+                    <label for="codigoCabysCrud">Código CABYS <span class="requerido">*</span></label>
+                    <input id="codigoCabysCrud" type="text" maxlength="13" required>
+                </div>
+
+                <div class="campo campo-doble">
+                    <label for="descripcionCabysCrud">Descripción <span class="requerido">*</span></label>
+                    <input id="descripcionCabysCrud" type="text" required>
+                </div>
+
+                <div class="campo">
+                    <label for="estadoCabysCrud">Estado</label>
+                    <select id="estadoCabysCrud">
+                        <option value="A">Activo</option>
+                        <option value="I">Inactivo</option>
+                    </select>
+                </div>
+
+                <div class="acciones-form campo-ancho">
+                    <button type="submit" class="btn-principal">Guardar CABYS</button>
+                    <button type="button" class="btn-cancelar" id="btnCancelarCabys">Cancelar</button>
+                </div>
+            </form>
+
+            <div class="separador campo-ancho"><span>Códigos CABYS registrados</span></div>
+            <div id="tablaCabysCrud" class="tabla-contenedor"></div>
+        </section>
+
+        <!-- PRODUCTOS / SERVICIOS - CRUD-->
+        <section id="productos" class="panel oculto">
+            <div class="panel-header">
+                <p class="panel-etiqueta">CRUD</p>
+                <h2>Productos / Servicios</h2>
+                <p class="panel-descripcion">Gestione los bienes o servicios relacionados con facturación.</p>
+            </div>
+
+            <form id="productoForm" class="form-grid">
+                <input type="hidden" id="productoServicioId">
+
+                <div class="campo campo-doble">
+                    <label for="cabysId">Código CABYS <span class="requerido">*</span></label>
+                    <select id="cabysId" required>
+                        <option value="">Seleccione código CABYS...</option>
+                    </select>
+                </div>
+
+                <div class="campo campo-doble">
+                    <label for="descripcionProducto">Descripción <span class="requerido">*</span></label>
+                    <input id="descripcionProducto" type="text" required>
+                </div>
+
+                <div class="campo">
+                    <label for="unidadMedida">Unidad de medida <span class="requerido">*</span></label>
+                    <input id="unidadMedida" type="text" required>
+                </div>
+
+                <div class="campo">
+                    <label for="precio">Precio <span class="requerido">*</span></label>
+                    <input id="precio" type="number" min="0" step="0.01" required>
+                </div>
+
+                <div class="campo">
+                    <label for="tipoImpuestoId">Tipo de impuesto <span class="requerido">*</span></label>
+                    <select id="tipoImpuestoId" required>
+                        <option value="">Seleccione impuesto...</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label for="estadoProducto">Estado</label>
+                    <select id="estadoProducto">
+                        <option value="A">Activo</option>
+                        <option value="I">Inactivo</option>
+                    </select>
+                </div>
+
+                <div class="acciones-form campo-ancho">
+                    <button type="submit" class="btn-principal">Guardar producto / servicio</button>
+                    <button type="button" class="btn-cancelar" id="btnCancelarProducto">Cancelar</button>
+                </div>
+            </form>
+
+            <div class="separador campo-ancho"><span>Productos / servicios registrados</span></div>
+            <div id="tablaProductos" class="tabla-contenedor"></div>
+        </section>
+
+        <!--  IMPUESTOS -->
+        <section id="impuestos" class="panel oculto">
+            <div class="panel-header">
+                <p class="panel-etiqueta">CRUD</p>
+                <h2>Tipos de impuesto</h2>
+            </div>
+
+            <form id="impuestoForm" class="form-grid">
+                <input type="hidden" id="tipoImpuestoCrudId">
+
+                <div class="campo">
+                    <label for="codigoImpuesto">Código <span class="requerido">*</span></label>
+                    <input id="codigoImpuesto" required>
+                </div>
+
+                <div class="campo campo-doble">
+                    <label for="descripcionImpuesto">Descripción <span class="requerido">*</span></label>
+                    <input id="descripcionImpuesto" required>
+                </div>
+
+                <div class="campo">
+                    <label for="porcentaje">Porcentaje <span class="requerido">*</span></label>
+                    <input id="porcentaje" type="number" min="0" step="0.01" required>
+                </div>
+
+                <div class="campo">
+                    <label for="tarifa">Tarifa <span class="requerido">*</span></label>
+                    <input id="tarifa" type="number" min="0" step="0.01" required>
+                </div>
+
+                <div class="acciones-form campo-ancho">
+                    <button type="submit" class="btn-principal">Guardar impuesto</button>
+                    <button type="reset" class="btn-cancelar">Cancelar</button>
+                </div>
+            </form>
+
+            <div id="tablaImpuestos" class="tabla-contenedor"></div>
+        </section>
+
+        <!-- FACTURAS-->
+        <section id="facturas" class="panel oculto">
+            <div class="panel-header">
+                <p class="panel-etiqueta">Facturación</p>
+                <h2>Nueva factura</h2>
+            </div>
+
+            <form id="facturaForm" class="form-grid">
+                <div class="campo">
+                    <label for="facturaClienteId">Cliente <span class="requerido">*</span></label>
+                    <input id="facturaClienteId" type="number" min="1" required>
+                </div>
+
+                <div class="campo">
+                    <label for="condicionVenta">Condición de venta</label>
+                    <select id="condicionVenta">
+                        <option value="CONTADO">Contado</option>
+                        <option value="CREDITO">Crédito</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label for="medioPago">Medio de pago</label>
+                    <select id="medioPago">
+                        <option value="EFECTIVO">Efectivo</option>
+                        <option value="TARJETA">Tarjeta</option>
+                        <option value="CHEQUE">Cheque</option>
+                        <option value="TRANSFERENCIA">Transferencia</option>
+                        <option value="SINPE_MOVIL">SINPE Móvil</option>
+                        <option value="OTROS">Otros</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label for="moneda">Moneda</label>
+                    <select id="moneda">
+                        <option value="CRC">CRC - Colón</option>
+                        <option value="USD">USD - Dólar</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label for="tipoCambio">Tipo de cambio</label>
+                    <input id="tipoCambio" type="number" min="0" step="0.0001" value="1">
+                </div>
+
+                <div class="campo campo-doble">
+                    <label for="observacionesFactura">Observaciones</label>
+                    <textarea id="observacionesFactura" rows="2"></textarea>
+                </div>
+
+                <div class="separador campo-ancho"><span>Detalle</span></div>
+
+                <div class="campo campo-doble">
+                    <label for="detalleProductoId">Producto / servicio <span class="requerido">*</span></label>
+                    <select id="detalleProductoId">
+                        <option value="">Seleccione producto o servicio...</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label for="detalleCantidad">Cantidad <span class="requerido">*</span></label>
+                    <input id="detalleCantidad" type="number" min="1" step="1" value="1">
+                </div>
+
+                <div class="acciones-form campo-ancho">
+                    <button type="button" id="agregarDetalle" class="btn-secundario">Agregar detalle</button>
+                    <button type="submit" class="btn-principal">Crear factura</button>
+                    <button type="button" id="btnCancelarFactura" class="btn-cancelar">Cancelar</button>
+                </div>
+            </form>
+
+            <div id="detallesFactura" class="detalle-lista"></div>
+            <div id="tablaFacturas" class="tabla-contenedor"></div>
+        </section>
+
+        <!-- NOTAS-->
+        <section id="notas" class="panel oculto">
+            <div class="panel-header">
+                <p class="panel-etiqueta">Documentos</p>
+                <h2>Notas crédito / débito</h2>
+            </div>
+
+            <form id="notaForm" class="form-grid">
+                <div class="campo">
+                    <label for="codigoNota">Código</label>
+                    <input id="codigoNota" required>
+                </div>
+
+                <div class="campo">
+                    <label for="notaFacturaId">Factura</label>
+                    <input id="notaFacturaId" type="number" min="1" required>
+                </div>
+
+                <div class="campo">
+                    <label for="tipoNota">Tipo</label>
+                    <select id="tipoNota">
+                        <option value="CREDITO">Crédito</option>
+                        <option value="DEBITO">Débito</option>
+                    </select>
+                </div>
+
+                <div class="campo campo-doble">
+                    <label for="motivoNota">Motivo</label>
+                    <textarea id="motivoNota" rows="2" required></textarea>
+                </div>
+
+                <div class="acciones-form campo-ancho">
+                    <button type="submit" class="btn-principal">Guardar nota</button>
+                    <button type="reset" class="btn-cancelar">Cancelar</button>
+                </div>
+            </form>
+
+            <div id="tablaNotas" class="tabla-contenedor"></div>
+        </section>
+
+        <!-- REPORTES -->
+        <section id="reportes" class="panel oculto">
+            <div class="panel-header">
+                <p class="panel-etiqueta">Consultas</p>
+                <h2>Reportes</h2>
+                <p class="panel-descripcion">Ejecute los reportes del sistema por rango de fechas.</p>
+            </div>
+
+            <div class="form-grid">
+                <div class="campo">
+                    <label for="reporteDesde">Fecha desde</label>
+                    <input id="reporteDesde" type="date">
+                </div>
+
+                <div class="campo">
+                    <label for="reporteHasta">Fecha hasta</label>
+                    <input id="reporteHasta" type="date">
+                </div>
+
+                <div class="acciones-form campo-ancho">
+                    <button type="button" class="btn-secundario" onclick="reporteClientes()">Clientes</button>
+                    <button type="button" class="btn-secundario" onclick="reporteFacturas()">Facturas</button>
+                    <button type="button" class="btn-secundario reporte-control" onclick="reporteAuditoria()">Auditoría</button>
+                    <button type="button" class="btn-secundario reporte-control" onclick="reporteSeguridad()">Seguridad</button>
+                </div>
+            </div>
+
+            <div id="resultadoReporte" class="tabla-contenedor"></div>
+        </section>
+
+        <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
+    </section>
+</main>
+
+<script src="./app.js"></script>
+</body>
+</html>
