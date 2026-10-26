@@ -1,2 +1,18 @@
 mvnw.cmd compile
 mvnw.cmd spring-boot:run
+
+C:\cloudflared.exe access tcp --hostname capibara.world --url localhost:14333
+$env:JWT_SECRET = -join ((1..48) | ForEach-Object { 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[(Get-Random -Maximum 62)] })
+
+[Environment]::SetEnvironmentVariable(
+    "JWT_SECRET",
+    $env:JWT_SECRET,
+    "User"
+)
+
+
+C:\cloudflared.exe access tcp --hostname capibara.world --url localhost:14333
+
+cd "C:\Users\Carlos\Documents\Proyecto BD2\propi\backend"
+.\mvnw.cmd clean compile
+.\mvnw.cmd spring-boot:run

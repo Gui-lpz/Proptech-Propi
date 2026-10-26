@@ -104,12 +104,8 @@
                 <div class="campo">
                     <label for="tipoIdentificacion">Tipo de identificación <span class="requerido">*</span></label>
                     <select id="tipoIdentificacion" required>
-                        <option value="">Seleccione...</option>
-                        <option value="01">01 - Cédula Física</option>
-                        <option value="02">02 - Cédula Jurídica</option>
-                        <option value="03">03 - DIMEX</option>
-                        <option value="04">04 - NITE</option>
-                    </select>
+<option value="">Cargando tipos de identificación...</option>
+</select>
                 </div>
 
                 <div class="campo">
@@ -192,6 +188,7 @@
             </form>
 
             <div class="separador campo-ancho"><span>Clientes registrados</span></div>
+<div class="campo campo-ancho"><label for="buscarCliente">Buscar cliente por identificación o nombre</label><input type="search" id="buscarCliente" placeholder="Escriba el número de identificación o nombre" autocomplete="off"></div>
             <div id="tablaClientes" class="tabla-contenedor"></div>
         </section>
 
@@ -259,7 +256,7 @@
 
                 <div class="campo">
                     <label for="unidadMedida">Unidad de medida <span class="requerido">*</span></label>
-                    <input id="unidadMedida" type="text" required>
+                    <select id="unidadMedida" required><option value="">Seleccione unidad de medida...</option></select>
                 </div>
 
                 <div class="campo">
@@ -341,35 +338,22 @@
             <form id="facturaForm" class="form-grid">
                 <div class="campo">
                     <label for="facturaClienteId">Cliente <span class="requerido">*</span></label>
-                    <input id="facturaClienteId" type="number" min="1" required>
+                    <select id="facturaClienteId" required><option value="">Seleccione cliente...</option></select>
                 </div>
 
                 <div class="campo">
                     <label for="condicionVenta">Condición de venta</label>
-                    <select id="condicionVenta">
-                        <option value="CONTADO">Contado</option>
-                        <option value="CREDITO">Crédito</option>
-                    </select>
+                    <select id="condicionVenta" required><option value="">Seleccione condición de venta...</option></select>
                 </div>
 
                 <div class="campo">
                     <label for="medioPago">Medio de pago</label>
-                    <select id="medioPago">
-                        <option value="EFECTIVO">Efectivo</option>
-                        <option value="TARJETA">Tarjeta</option>
-                        <option value="CHEQUE">Cheque</option>
-                        <option value="TRANSFERENCIA">Transferencia</option>
-                        <option value="SINPE_MOVIL">SINPE Móvil</option>
-                        <option value="OTROS">Otros</option>
-                    </select>
+                    <select id="medioPago" required><option value="">Seleccione medio de pago...</option></select>
                 </div>
 
                 <div class="campo">
                     <label for="moneda">Moneda</label>
-                    <select id="moneda">
-                        <option value="CRC">CRC - Colón</option>
-                        <option value="USD">USD - Dólar</option>
-                    </select>
+                    <select id="moneda" required><option value="">Seleccione moneda...</option></select>
                 </div>
 
                 <div class="campo">
@@ -422,14 +406,14 @@
 
                 <div class="campo">
                     <label for="notaFacturaId">Factura</label>
-                    <input id="notaFacturaId" type="number" min="1" required>
+                    <select id="notaFacturaId" required><option value="">Seleccione factura...</option></select>
                 </div>
 
                 <div class="campo">
                     <label for="tipoNota">Tipo</label>
                     <select id="tipoNota">
-                        <option value="CREDITO">Crédito</option>
-                        <option value="DEBITO">Débito</option>
+                        <option value="C">Crédito</option>
+                        <option value="D">Débito</option>
                     </select>
                 </div>
 
@@ -438,7 +422,7 @@
                     <textarea id="motivoNota" rows="2" required></textarea>
                 </div>
 
-                <div class="acciones-form campo-ancho">
+                <div class="campo"><label for="fechaNota">Fecha</label><input type="date" id="fechaNota" required></div><div class="campo"><label for="montoNota">Monto</label><input type="number" id="montoNota" min="0.01" step="0.01" required></div><div class="acciones-form campo-ancho">
                     <button type="submit" class="btn-principal">Guardar nota</button>
                     <button type="reset" class="btn-cancelar">Cancelar</button>
                 </div>

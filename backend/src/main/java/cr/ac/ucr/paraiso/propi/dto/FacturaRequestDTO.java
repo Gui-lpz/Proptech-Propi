@@ -1,11 +1,16 @@
 package cr.ac.ucr.paraiso.propi.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class FacturaRequestDTO {
 
     private Integer clienteId;
+    private Integer condicionVentaId;
+    private Integer medioPagoId;
+    private Integer monedaId;
+    private LocalDateTime fecha;
     private String condicionVenta;
     private String medioPago;
     private String moneda;
@@ -67,5 +72,37 @@ public class FacturaRequestDTO {
 
     public void setDetalles(List<FacturaDetalleRequestDTO> detalles) {
         this.detalles = detalles;
+    }
+
+    public Integer getCondicionVentaId() {
+        return condicionVentaId;
+    }
+
+    public void setCondicionVentaId(Integer v) {
+        condicionVentaId = v;
+    }
+
+    public Integer getMedioPagoId() {
+        return medioPagoId;
+    }
+
+    public void setMedioPagoId(Integer v) {
+        medioPagoId = v;
+    }
+
+    public Integer getMonedaId() {
+        return monedaId;
+    }
+
+    public void setMonedaId(Integer v) {
+        monedaId = v;
+    }
+
+    public LocalDateTime getFecha() {
+        return fecha;
+    }
+
+    public void setFecha(LocalDateTime v) {
+        fecha = v;
     }
 }

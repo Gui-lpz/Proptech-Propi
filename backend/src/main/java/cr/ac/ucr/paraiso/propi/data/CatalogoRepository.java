@@ -8,120 +8,36 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class CatalogoRepository {
+    private final JdbcTemplate jdbc;
 
-    private final JdbcTemplate jdbcTemplate;
-
-    public CatalogoRepository(
-            JdbcTemplate jdbcTemplate) {
-
-        this.jdbcTemplate = jdbcTemplate;
+    public CatalogoRepository(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
     }
-
-    /* PROVINCIAS */
 
     public List<Map<String, Object>> listarProvincias() {
-
-        String sql = """
-                SELECT
-                    ProvinciaID AS provinciaId,
-                    CodigoProvincia AS codigoProvincia,
-                    Nombre AS nombre
-                FROM Provincia
-                ORDER BY ProvinciaID
-                """;
-
-        return jdbcTemplate
-                .queryForList(sql);
+        return jdbc.queryForList(
+                "SELECT ProvinciaID AS provinciaId, CodigoProvincia AS codigoProvincia, Nombre AS nombre FROM dbo.Provincia WHERE Estado = 'A' ORDER BY Nombre");
     }
 
-    /* CANTONES POR PROVINCIA */
-
-    public List<Map<String, Object>> listarCantones(
-            int provinciaId) {
-
-        String sql = """
-                SELECT
-                    CantonID AS cantonId,
-                    ProvinciaID AS provinciaId,
-                    CodigoCanton AS codigoCanton,
-                    Nombre AS nombre
-                FROM Canton
-                WHERE ProvinciaID = ?
-                ORDER BY CantonID
-                """;
-
-        return jdbcTemplate
-                .queryForList(
-                        sql,
-                        provinciaId);
+    public List<Map<String, Object>> listarCantones(int provinciaId) {
+        return jdbc.queryForList(
+                "SELECT CantonID AS cantonId, ProvinciaID AS provinciaId, CodigoCanton AS codigoCanton, Nombre AS nombre FROM dbo.Canton WHERE Estado='A' AND ProvinciaID=? ORDER BY Nombre",
+                provinciaId);
     }
 
-    /* DISTRITOS POR CANTÓN */
-
-    public List<Map<String, Object>> listarDistritos(
-            int cantonId) {
-
-        String sql = """
-                SELECT
-                    DistritoID AS distritoId,
-                    CantonID AS cantonId,
-                    CodigoDistrito AS codigoDistrito,
-                    Nombre AS nombre
-                FROM Distrito
-                WHERE CantonID = ?
-                ORDER BY DistritoID
-                """;
-
-        return jdbcTemplate
-                .queryForList(
-                        sql,
-                        cantonId);
+    public List<Map<String, Object>> listarDistritos(int cantonId) {
+        return jdbc.queryForList(
+                "SELECT DistritoID AS distritoId, CantonID AS cantonId, CodigoDistrito AS codigoDistrito, Nombre AS nombre FROM dbo.Distrito WHERE Estado='A' AND CantonID=? ORDER BY Nombre",
+                cantonId);
     }
-
-    /* ACTIVIDADES ECONÓMICAS */
 
     public List<Map<String, Object>> listarActividadesEconomicas() {
-
-        String sql = """
-                SELECT
-                    ActividadEconomicaID
-                        AS actividadEconomicaId,
-
-                    CodigoActividad
-                        AS codigoActividad,
-
-                    Descripcion
-                        AS descripcion
-
-                FROM ActividadEconomica
-
-                WHERE Estado = 'A'
-
-                ORDER BY CodigoActividad
-                """;
-
-        return jdbcTemplate
-                .queryForList(sql);
+        return jdbc.queryForList(
+                "SELECT ActividadEconomicaID AS actividadEconomicaId, Codigo AS codigoActividad, Descripcion AS descripcion FROM dbo.ActividadEconomica WHERE Estado='A' ORDER BY Codigo");
     }
 
-    /* CABYS */
-
     public List<Map<String, Object>> listarCabys() {
-
-        String sql = """
-                SELECT
-                    CabysID AS cabysId,
-                    CodigoCABYS AS codigoCABYS,
-                    Descripcion AS descripcion
-
-                FROM Cabys
-
-                WHERE Estado = 'A'
-
-                ORDER BY CodigoCABYS
-                """;
-
-        return jdbcTemplate
-                .queryForList(sql);
+        return jdbc.queryForList(
+                "SELECT CabysID AS cabysId, CodigoCABYS AS codigoCABYS, Descripcion AS descripcion FROM dbo.Cabys WHERE Estado='A' ORDER BY CodigoCABYS");
     }
 }

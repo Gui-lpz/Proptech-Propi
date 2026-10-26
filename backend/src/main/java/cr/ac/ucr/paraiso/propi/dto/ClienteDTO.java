@@ -8,6 +8,8 @@ public class ClienteDTO {
 
     private String nombre;
 
+    private Integer tipoIdentificacionId;
+
     private String tipoIdentificacion;
 
     private String numeroIdentificacion;
@@ -62,6 +64,14 @@ public class ClienteDTO {
             String nombre) {
 
         this.nombre = nombre;
+    }
+
+    public Integer getTipoIdentificacionId() {
+        return tipoIdentificacionId;
+    }
+
+    public void setTipoIdentificacionId(Integer tipoIdentificacionId) {
+        this.tipoIdentificacionId = tipoIdentificacionId;
     }
 
     public String getTipoIdentificacion() {
