@@ -1,0 +1,48 @@
+PASO 1. PRIMERA VENTANA DE POWERSHELL — ABRIR EL TÚNEL
+Ejecutar:
+
+C:\cloudflared.exe access tcp --hostname capibara.world --url localhost:14333
+
+
+PASO 2. SEGUNDA VENTANA DE POWERSHELL — GUARDAR JWT_SECRET
+uQhHwgkg8Lyi+D98RsKTZ7JVy6m9DZwiVJzmK/qA9bo=
+
+
+$env:JWT_SECRET = 'uQhHwgkg8Lyi+D98RsKTZ7JVy6m9DZwiVJzmK/qA9bo='
+[Environment]::SetEnvironmentVariable('JWT_SECRET', $env:JWT_SECRET, 'User')
+$env:JWT_SECRET.Length
+
+Resultado esperado de longitud: 44.
+'User' guarda la variable para el usuario actual de Windows, no para toda la PC.
+
+
+PASO 3. SSMS
+
+Login SQL: Propi_Admin
+Contraseña: Propi-2026
+
+
+PASO 4. EN LA SEGUNDA VENTANA de powerShell — ENTRAR EN LA CARPETA BACKEND
+
+PASO 5. COMPILAR Y EJECUTAR SPRING BOOT
+
+.\mvnw.cmd compile
+.\mvnw.cmd spring-boot:run
+
+Dejar ABIERTA la ventana donde se esté ejecutando Spring Boot.
+
+
+PASO 6. ABRIR EL FRONTEND
+Abrir frontend/login.html mediante Live Server en VS Code.
+http://127.0.0.1:5500/login.html
+
+Administrador: Propi_Admin     | contraseña: Propi-2026
+Digitador:     Propi_Digitador | contraseña: 2620!-Propi
+Consulta:      Propi_Consulta  | contraseña: 2026-Propi!
+
+
+CADA VEZ QUE VAYA A TRABAJAR
+1) Abrir PowerShell y ejecutar el comando cloudflared del paso 1.
+2) En otra PowerShell: cd a backend y ejecutar .\mvnw.cmd spring-boot:run.
+3) Abrir login.html con Live Server.
+(No hace falta volver a guardar las variables de entorno diariamente.)

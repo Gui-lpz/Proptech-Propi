@@ -186,10 +186,17 @@ async function api(path, options = {}) {
         }
     });
 
-    if (response.status === 401) {
-        cerrarSesion();
-        return null;
-    }
+  if (response.status === 401) {
+
+    localStorage.removeItem("jwt_token");
+    localStorage.removeItem("username");
+    localStorage.removeItem("roles");
+    localStorage.removeItem("sessionId");
+
+    location.href = "./login.html";
+    return null;
+}
+
 
     if (response.status === 403) {
         throw new Error("No tiene permisos para realizar esta operación.");
@@ -218,9 +225,64 @@ async function api(path, options = {}) {
     return data;
 }
 
-function cerrarSesion() {
-    localStorage.clear();
-    location.href = "./login.html";
+/*
+ * REQ 003: Cerrar sesión.
+ *
+ * Registra la salida en SQL Server antes
+ * de eliminar los datos del navegador.
+ */
+
+
+async function cerrarSesion() {
+
+    const token = localStorage.getItem("jwt_token");
+    const sessionId = localStorage.getItem("sessionId");
+
+    if (!token || !sessionId) {
+        alert("La sesión no tiene credenciales válidas.");
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "http://localhost:8080/api/auth/logout",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    sessionId: sessionId
+                })
+            }
+        );
+
+        if (!response.ok) {
+            const detalle = await response.text();
+
+            console.error(
+                "Error al cerrar sesión:",
+                response.status,
+                detalle
+            );
+
+            throw new Error(
+                "No fue posible registrar la salida."
+            );
+        }
+
+        localStorage.removeItem("jwt_token");
+        localStorage.removeItem("username");
+        localStorage.removeItem("roles");
+        localStorage.removeItem("sessionId");
+
+        window.location.href = "./login.html";
+
+    } catch (error) {
+        console.error(error);
+        alert(error.message);
+    }
 }
 
 function mostrarMensaje(texto, tipo = "info") {
@@ -478,6 +540,16 @@ document.getElementById("canton").addEventListener(
 
 let clientesCache = [];
 
+function filtrarTablaClientes() {
+ const q = (document.getElementById("buscarCliente")?.value || "").trim().toLocaleLowerCase();
+ document.querySelectorAll("#tablaClientes tbody tr").forEach(fila => {
+   const id = (fila.cells[1]?.textContent || "").toLocaleLowerCase();
+   const nombre = (fila.cells[2]?.textContent || "").toLocaleLowerCase();
+   fila.hidden = !(id.includes(q) || nombre.includes(q));
+ });
+}
+document.getElementById("buscarCliente")?.addEventListener("input", filtrarTablaClientes);
+
 async function cargarClientes() {
 
     try {
@@ -674,6 +746,7 @@ async function cargarClientes() {
                     </table>
                 </div>
             `;
+        filtrarTablaClientes();
 
     } catch (error) {
 
@@ -732,7 +805,7 @@ document.getElementById("clienteForm").addEventListener(
 
         const dto = {
             nombre: document.getElementById("nombre").value.trim(),
-            tipoIdentificacion: document.getElementById("tipoIdentificacion").value,
+            tipoIdentificacionId: Number(document.getElementById("tipoIdentificacion").value),
             numeroIdentificacion: document.getElementById("numeroIdentificacion").value.trim(),
             distritoId: parseInt(document.getElementById("distrito").value, 10),
             barrio: document.getElementById("barrio").value.trim(),
@@ -781,7 +854,7 @@ async function editarCliente(cliente) {
         valor(cliente, "clienteId", "ClienteID");
 
     document.getElementById("tipoIdentificacion").value =
-        valor(cliente, "tipoIdentificacion", "TipoIdentificacion");
+        valor(cliente, "tipoIdentificacionId", "TipoIdentificacionID");
 
     document.getElementById("numeroIdentificacion").value =
         valor(cliente, "numeroIdentificacion", "NumeroIdentificacion");
@@ -958,7 +1031,7 @@ function cargarCabysSelect(data) {
     ponerOpciones(
         document.getElementById("cabysId"),
         data || [],
-        item => valor(item, "cabysId", "CabysID", "id"),
+        item => valor(item, "codigoCABYS", "codigoCabys", "CodigoCABYS"),
         item => {
             const codigo = valor(
                 item,
@@ -1193,12 +1266,12 @@ document.getElementById("productoForm").addEventListener(
             document.getElementById("productoServicioId").value;
 
         const dto = {
-            cabysId:
-                parseInt(document.getElementById("cabysId").value, 10),
+            codigoCabys:
+                document.getElementById("cabysId").value,
             descripcion:
                 document.getElementById("descripcionProducto").value.trim(),
-            unidadMedida:
-                document.getElementById("unidadMedida").value.trim(),
+            unidadMedidaId:
+                Number(document.getElementById("unidadMedida").value),
             precio:
                 parseFloat(document.getElementById("precio").value),
             tipoImpuestoId:
@@ -1261,13 +1334,13 @@ function editarProducto(item) {
         valor(item, "productoServicioId", "ProductoServicioID");
 
     document.getElementById("cabysId").value =
-        valor(item, "cabysId", "CabysID");
+        valor(item, "codigoCabys", "codigoCABYS", "CodigoCABYS");
 
     document.getElementById("descripcionProducto").value =
         valor(item, "descripcion", "Descripcion");
 
     document.getElementById("unidadMedida").value =
-        valor(item, "unidadMedida", "UnidadMedida");
+        valor(item, "unidadMedidaId", "UnidadMedidaID");
 
     document.getElementById("precio").value =
         valor(item, "precio", "Precio");
@@ -1506,12 +1579,9 @@ document.getElementById("facturaForm").addEventListener(
                             document.getElementById("facturaClienteId").value,
                             10
                         ),
-                    condicionVenta:
-                        document.getElementById("condicionVenta").value,
-                    medioPago:
-                        document.getElementById("medioPago").value,
-                    moneda:
-                        document.getElementById("moneda").value,
+                    condicionVentaId: Number(document.getElementById("condicionVenta").value),
+                    medioPagoId: Number(document.getElementById("medioPago").value),
+                    monedaId: Number(document.getElementById("moneda").value),
                     tipoCambio:
                         parseFloat(
                             document.getElementById("tipoCambio").value
@@ -1562,6 +1632,7 @@ document.getElementById("btnCancelarFactura").addEventListener(
 async function cargarFacturas() {
     try {
         const data = await api("/facturas");
+        cargarFacturasNota(data);
         document.getElementById("tablaFacturas").innerHTML =
             crearTabla(data);
     } catch {
@@ -1598,12 +1669,15 @@ document.getElementById("notaForm").addEventListener(
                         ),
                     tipo:
                         document.getElementById("tipoNota").value,
+                    fecha: document.getElementById("fechaNota").value,
+                    monto: Number(document.getElementById("montoNota").value),
                     motivo:
                         document.getElementById("motivoNota").value.trim()
                 })
             });
 
             document.getElementById("notaForm").reset();
+            document.getElementById("fechaNota").value = new Date().toISOString().slice(0,10);
             await cargarNotas();
 
             mostrarMensaje("Nota guardada correctamente.", "exito");
@@ -1859,10 +1933,48 @@ function crearTablaConAcciones(
 }
 
 
+
+/* CATÁLOGOS DEL FORMULARIO: IDs REALES DE SQL SERVER */
+async function cargarCatalogo(id, ruta, idKey, etiqueta) {
+    const select = document.getElementById(id);
+    if (!select) return;
+    try {
+        const data = await api(ruta);
+        ponerOpciones(select, data, fila => fila[idKey], fila => etiqueta(fila), "Seleccione...");
+    } catch (err) {
+        console.error(`Error al cargar ${id}:`, err);
+        ponerOpciones(select, [], () => "", () => "", "No disponible");
+    }
+}
+async function cargarCatalogosAdicionales() {
+    await Promise.all([
+        cargarCatalogo("tipoIdentificacion", "/catalogos-extra/tipos-identificacion", "tipoIdentificacionId", x => `${x.codigo} - ${x.descripcion}`),
+        cargarCatalogo("unidadMedida", "/catalogos-extra/unidades-medida", "unidadMedidaId", x => `${x.codigo} - ${x.descripcion}`),
+        cargarCatalogo("condicionVenta", "/catalogos-extra/condiciones-venta", "condicionVentaId", x => `${x.codigo} - ${x.descripcion}`),
+        cargarCatalogo("medioPago", "/catalogos-extra/medios-pago", "medioPagoId", x => `${x.codigo} - ${x.descripcion}`),
+        cargarCatalogo("moneda", "/catalogos-extra/monedas", "monedaId", x => `${x.codigo} - ${x.descripcion}`)
+    ]);
+}
+function cargarClientesFactura(clientes) {
+    ponerOpciones(document.getElementById("facturaClienteId"),
+       (clientes || []).filter(c => valor(c,"estado","Estado") === "A"),
+       c => valor(c,"clienteId","ClienteID"),
+       c => `${valor(c,"numeroIdentificacion","NumeroIdentificacion")} - ${valor(c,"nombre","Nombre")}`,
+       "Seleccione cliente...");
+}
+function cargarFacturasNota(facturas) {
+    ponerOpciones(document.getElementById("notaFacturaId"), facturas || [],
+       f => valor(f,"facturaId","FacturaID"),
+       f => `Factura #${valor(f,"facturaId","FacturaID")}`,
+       "Seleccione factura...");
+}
+
 /* INICIO*/
 
 async function iniciar() {
     configurarRol();
+    document.getElementById("fechaNota").value = new Date().toISOString().slice(0,10);
+    await cargarCatalogosAdicionales();
 
     await Promise.all([
         cargarProvincias(),

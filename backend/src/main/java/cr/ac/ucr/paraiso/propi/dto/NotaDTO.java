@@ -1,8 +1,13 @@
 package cr.ac.ucr.paraiso.propi.dto;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 public class NotaDTO {
 
     private Integer notaId;
+    private LocalDate fecha;
+    private BigDecimal monto;
     private String codigo;
     private Integer facturaId;
     private String tipo;
@@ -46,5 +51,21 @@ public class NotaDTO {
 
     public void setMotivo(String motivo) {
         this.motivo = motivo;
+    }
+
+    public LocalDate getFecha() {
+        return fecha;
+    }
+
+    public void setFecha(LocalDate fecha) {
+        this.fecha = fecha;
+    }
+
+    public BigDecimal getMonto() {
+        return monto;
+    }
+
+    public void setMonto(BigDecimal monto) {
+        this.monto = monto;
     }
 }
