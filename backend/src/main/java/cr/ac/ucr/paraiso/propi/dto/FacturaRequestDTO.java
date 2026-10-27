@@ -11,11 +11,17 @@ public class FacturaRequestDTO {
     private Integer medioPagoId;
     private Integer monedaId;
     private LocalDateTime fecha;
+
     private String condicionVenta;
     private String medioPago;
     private String moneda;
+
     private BigDecimal tipoCambio;
     private String observaciones;
+
+    private BigDecimal montoRecibido;
+    private BigDecimal vuelto;
+
     private List<FacturaDetalleRequestDTO> detalles;
 
     public Integer getClienteId() {
@@ -24,6 +30,38 @@ public class FacturaRequestDTO {
 
     public void setClienteId(Integer clienteId) {
         this.clienteId = clienteId;
+    }
+
+    public Integer getCondicionVentaId() {
+        return condicionVentaId;
+    }
+
+    public void setCondicionVentaId(Integer condicionVentaId) {
+        this.condicionVentaId = condicionVentaId;
+    }
+
+    public Integer getMedioPagoId() {
+        return medioPagoId;
+    }
+
+    public void setMedioPagoId(Integer medioPagoId) {
+        this.medioPagoId = medioPagoId;
+    }
+
+    public Integer getMonedaId() {
+        return monedaId;
+    }
+
+    public void setMonedaId(Integer monedaId) {
+        this.monedaId = monedaId;
+    }
+
+    public LocalDateTime getFecha() {
+        return fecha;
+    }
+
+    public void setFecha(LocalDateTime fecha) {
+        this.fecha = fecha;
     }
 
     public String getCondicionVenta() {
@@ -66,43 +104,27 @@ public class FacturaRequestDTO {
         this.observaciones = observaciones;
     }
 
+    public BigDecimal getMontoRecibido() {
+        return montoRecibido;
+    }
+
+    public void setMontoRecibido(BigDecimal montoRecibido) {
+        this.montoRecibido = montoRecibido;
+    }
+
+    public BigDecimal getVuelto() {
+        return vuelto;
+    }
+
+    public void setVuelto(BigDecimal vuelto) {
+        this.vuelto = vuelto;
+    }
+
     public List<FacturaDetalleRequestDTO> getDetalles() {
         return detalles;
     }
 
     public void setDetalles(List<FacturaDetalleRequestDTO> detalles) {
         this.detalles = detalles;
-    }
-
-    public Integer getCondicionVentaId() {
-        return condicionVentaId;
-    }
-
-    public void setCondicionVentaId(Integer v) {
-        condicionVentaId = v;
-    }
-
-    public Integer getMedioPagoId() {
-        return medioPagoId;
-    }
-
-    public void setMedioPagoId(Integer v) {
-        medioPagoId = v;
-    }
-
-    public Integer getMonedaId() {
-        return monedaId;
-    }
-
-    public void setMonedaId(Integer v) {
-        monedaId = v;
-    }
-
-    public LocalDateTime getFecha() {
-        return fecha;
-    }
-
-    public void setFecha(LocalDateTime v) {
-        fecha = v;
     }
 }

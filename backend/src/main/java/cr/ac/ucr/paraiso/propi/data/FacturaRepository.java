@@ -1,13 +1,15 @@
 package cr.ac.ucr.paraiso.propi.data;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.Timestamp;
+import java.sql.Types;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
-import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.stereotype.Repository;
 
 import cr.ac.ucr.paraiso.propi.dto.FacturaDetalleRequestDTO;
@@ -18,9 +20,7 @@ public class FacturaRepository {
 
         private final JdbcTemplate jdbcTemplate;
 
-        public FacturaRepository(
-                        JdbcTemplate jdbcTemplate) {
-
+        public FacturaRepository(JdbcTemplate jdbcTemplate) {
                 this.jdbcTemplate = jdbcTemplate;
         }
 
@@ -29,128 +29,233 @@ public class FacturaRepository {
                         String usuario,
                         String sesion) {
 
-                return jdbcTemplate.execute(
+                LocalDateTime fecha = LocalDateTime.now();
 
-                                (ConnectionCallback<Integer>) connection -> {
+                // 1. Crear encabezado de factura
+                Integer facturaId = jdbcTemplate.queryForObject(
+                                """
+                                                EXEC dbo.sp_Facturas_Guardar
+                                                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                                                """,
+                                new Object[] {
+                                                new SqlParameterValue(Types.INTEGER, null),
+                                                dto.getClienteId(),
+                                                Timestamp.valueOf(fecha),
+                                                dto.getCondicionVentaId(),
+                                                dto.getMedioPagoId(),
+                                                dto.getMonedaId(),
+                                                dto.getTipoCambio(),
+                                                dto.getObservaciones(),
+                                                usuario,
+                                                sesion,
+                                                null,
+                                                null
+                                },
+                                new int[] {
+                                                Types.INTEGER,
+                                                Types.INTEGER,
+                                                Types.TIMESTAMP,
+                                                Types.INTEGER,
+                                                Types.INTEGER,
+                                                Types.INTEGER,
+                                                Types.DECIMAL,
+                                                Types.VARCHAR,
+                                                Types.VARCHAR,
+                                                Types.VARCHAR,
+                                                Types.DECIMAL,
+                                                Types.DECIMAL
+                                },
+                                (rs, rowNum) -> rs.getInt("FacturaID"));
 
-                                        String sql = """
-                                                        EXEC facturacion.sp_Factura_Crear
-                                                            ?, ?, ?, ?, ?, ?, ?, ?
-                                                        """;
+                if (facturaId == null) {
+                        throw new IllegalStateException(
+                                        "No se obtuvo el FacturaID.");
+                }
 
-                                        try (
-                                                        PreparedStatement ps = connection.prepareStatement(sql)) {
+                // 2. Insertar detalles
+                for (FacturaDetalleRequestDTO detalle : dto.getDetalles()) {
+                        insertarDetalle(facturaId, detalle);
+                }
 
-                                                ps.setInt(
-                                                                1,
-                                                                dto.getClienteId());
+                // 3. Recalcular totales
+                jdbcTemplate.update(
+                                "EXEC dbo.sp_Factura_Recalcular ?",
+                                facturaId);
 
-                                                ps.setString(
-                                                                2,
-                                                                dto.getCondicionVenta());
+                // 4. Consultar el total final de la factura
+                BigDecimal totalFactura = jdbcTemplate.queryForObject(
+                                """
+                                                SELECT MontoTotal
+                                                FROM dbo.Facturas
+                                                WHERE FacturaID = ?
+                                                """,
+                                BigDecimal.class,
+                                facturaId);
 
-                                                ps.setString(
-                                                                3,
-                                                                dto.getMedioPago());
+                if (totalFactura == null) {
+                        throw new IllegalStateException(
+                                        "No se pudo obtener el total final de la factura.");
+                }
 
-                                                ps.setString(
-                                                                4,
-                                                                dto.getMoneda());
+                totalFactura = totalFactura.setScale(2, RoundingMode.HALF_UP);
 
-                                                ps.setBigDecimal(
-                                                                5,
-                                                                dto.getTipoCambio());
+                // 5. Calcular pago y vuelto
+                BigDecimal montoRecibidoFinal = calcularMontoRecibidoFinal(dto, totalFactura);
+                BigDecimal vueltoFinal = calcularVueltoFinal(dto, totalFactura, montoRecibidoFinal);
 
-                                                ps.setString(
-                                                                6,
-                                                                dto.getObservaciones());
+                // 6. Actualizar factura con usuario, sesión, monto recibido y vuelto
+                jdbcTemplate.queryForObject(
+                                """
+                                                EXEC dbo.sp_Facturas_Guardar
+                                                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                                                """,
+                                new Object[] {
+                                                facturaId,
+                                                dto.getClienteId(),
+                                                Timestamp.valueOf(fecha),
+                                                dto.getCondicionVentaId(),
+                                                dto.getMedioPagoId(),
+                                                dto.getMonedaId(),
+                                                dto.getTipoCambio(),
+                                                dto.getObservaciones(),
+                                                usuario,
+                                                sesion,
+                                                montoRecibidoFinal,
+                                                vueltoFinal
+                                },
+                                new int[] {
+                                                Types.INTEGER,
+                                                Types.INTEGER,
+                                                Types.TIMESTAMP,
+                                                Types.INTEGER,
+                                                Types.INTEGER,
+                                                Types.INTEGER,
+                                                Types.DECIMAL,
+                                                Types.VARCHAR,
+                                                Types.VARCHAR,
+                                                Types.VARCHAR,
+                                                Types.DECIMAL,
+                                                Types.DECIMAL
+                                },
+                                (rs, rowNum) -> rs.getInt("FacturaID"));
 
-                                                ps.setString(
-                                                                7,
-                                                                usuario);
-
-                                                ps.setString(
-                                                                8,
-                                                                sesion);
-
-                                                try (
-                                                                ResultSet rs = ps.executeQuery()) {
-
-                                                        if (!rs.next()) {
-
-                                                                throw new RuntimeException(
-                                                                                "No se obtuvo FacturaID.");
-                                                        }
-
-                                                        Integer facturaId = rs.getInt(
-                                                                        "FacturaID");
-
-                                                        insertarDetalles(
-                                                                        connection,
-                                                                        facturaId,
-                                                                        dto.getDetalles(),
-                                                                        usuario,
-                                                                        sesion);
-
-                                                        return facturaId;
-                                                }
-                                        }
-                                });
+                return facturaId;
         }
 
-        private void insertarDetalles(
-                        Connection connection,
+        private void insertarDetalle(
                         Integer facturaId,
-                        List<FacturaDetalleRequestDTO> detalles,
-                        String usuario,
-                        String sesion)
-                        throws SQLException {
+                        FacturaDetalleRequestDTO detalle) {
 
-                if (detalles == null
-                                || detalles.isEmpty()) {
+                DatosProducto producto = jdbcTemplate.queryForObject(
+                                """
+                                                SELECT
+                                                    p.Precio,
+                                                    t.Porcentaje
+                                                FROM dbo.ProductoServicio p
+                                                INNER JOIN dbo.TipoImpuesto t
+                                                    ON p.TipoImpuestoID = t.TipoImpuestoID
+                                                WHERE p.ProductoServicioID = ?
+                                                  AND p.Estado = 'A'
+                                                """,
+                                (rs, rowNum) -> new DatosProducto(
+                                                rs.getBigDecimal("Precio"),
+                                                rs.getBigDecimal("Porcentaje")),
+                                detalle.getProductoServicioId());
 
+                if (producto == null
+                                || producto.precio() == null
+                                || producto.porcentaje() == null) {
                         throw new IllegalArgumentException(
-                                        "La factura debe tener al menos un detalle.");
+                                        "No se pudo obtener el precio o impuesto del producto.");
                 }
 
-                String sql = """
-                                EXEC facturacion.sp_FacturaDetalle_Insertar
-                                    ?, ?, ?, ?, ?
-                                """;
+                BigDecimal cantidad = detalle.getCantidad().setScale(2, RoundingMode.HALF_UP);
 
-                for (FacturaDetalleRequestDTO detalle : detalles) {
+                BigDecimal subtotalLinea = producto.precio()
+                                .multiply(cantidad)
+                                .setScale(4, RoundingMode.HALF_UP);
 
-                        try (
-                                        PreparedStatement ps = connection.prepareStatement(sql)) {
+                BigDecimal montoImpuesto = subtotalLinea
+                                .multiply(producto.porcentaje())
+                                .divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
 
-                                ps.setInt(
-                                                1,
-                                                facturaId);
-
-                                ps.setInt(
-                                                2,
-                                                detalle.getProductoServicioId());
-
-                                ps.setBigDecimal(
-                                                3,
-                                                detalle.getCantidad());
-
-                                ps.setString(
-                                                4,
-                                                usuario);
-
-                                ps.setString(
-                                                5,
-                                                sesion);
-
-                                ps.executeUpdate();
-                        }
-                }
+                // OJO:
+                // sp_FacturasDetalle_Guardar devuelve un resultset con DetalleID,
+                // por eso se usa queryForObject y NO update.
+                jdbcTemplate.queryForObject(
+                                """
+                                                EXEC dbo.sp_FacturasDetalle_Guardar
+                                                    ?, ?, ?, ?, ?, ?
+                                                """,
+                                new Object[] {
+                                                new SqlParameterValue(Types.INTEGER, null),
+                                                facturaId,
+                                                detalle.getProductoServicioId(),
+                                                cantidad,
+                                                montoImpuesto,
+                                                subtotalLinea
+                                },
+                                new int[] {
+                                                Types.INTEGER,
+                                                Types.INTEGER,
+                                                Types.INTEGER,
+                                                Types.DECIMAL,
+                                                Types.DECIMAL,
+                                                Types.DECIMAL
+                                },
+                                (rs, rowNum) -> rs.getInt("DetalleID"));
         }
 
-        public List<java.util.Map<String, Object>> listar() {
+        private BigDecimal calcularMontoRecibidoFinal(
+                        FacturaRequestDTO dto,
+                        BigDecimal totalFactura) {
 
+                // Efectivo
+                if (dto.getMedioPagoId() != null && dto.getMedioPagoId() == 1) {
+
+                        if (dto.getMontoRecibido() == null) {
+                                throw new IllegalArgumentException(
+                                                "Debe indicar el monto recibido en efectivo.");
+                        }
+
+                        BigDecimal recibido = dto.getMontoRecibido()
+                                        .setScale(2, RoundingMode.HALF_UP);
+
+                        if (recibido.compareTo(totalFactura) < 0) {
+                                throw new IllegalArgumentException(
+                                                "El monto recibido no puede ser menor al total de la factura.");
+                        }
+
+                        return recibido;
+                }
+
+                // Para tarjeta, SINPE, transferencia, etc.
+                // normalmente se paga exacto.
+                return totalFactura.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        private BigDecimal calcularVueltoFinal(
+                        FacturaRequestDTO dto,
+                        BigDecimal totalFactura,
+                        BigDecimal montoRecibidoFinal) {
+
+                // Efectivo
+                if (dto.getMedioPagoId() != null && dto.getMedioPagoId() == 1) {
+                        return montoRecibidoFinal
+                                        .subtract(totalFactura)
+                                        .setScale(2, RoundingMode.HALF_UP);
+                }
+
+                return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        public List<Map<String, Object>> listar() {
                 return jdbcTemplate.queryForList(
-                                "EXEC facturacion.sp_Factura_Listar");
+                                "EXEC dbo.sp_Facturas_Listar");
+        }
+
+        private record DatosProducto(
+                        BigDecimal precio,
+                        BigDecimal porcentaje) {
         }
 }

@@ -1,3 +1,4 @@
+
 package cr.ac.ucr.paraiso.propi.dto;
 
 import java.math.BigDecimal;
