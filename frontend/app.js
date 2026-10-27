@@ -186,16 +186,16 @@ async function api(path, options = {}) {
         }
     });
 
-  if (response.status === 401) {
+    if (response.status === 401) {
 
-    localStorage.removeItem("jwt_token");
-    localStorage.removeItem("username");
-    localStorage.removeItem("roles");
-    localStorage.removeItem("sessionId");
+        localStorage.removeItem("jwt_token");
+        localStorage.removeItem("username");
+        localStorage.removeItem("roles");
+        localStorage.removeItem("sessionId");
 
-    location.href = "./login.html";
-    return null;
-}
+        location.href = "./login.html";
+        return null;
+    }
 
 
     if (response.status === 403) {
@@ -233,57 +233,61 @@ async function api(path, options = {}) {
  */
 
 
+
 async function cerrarSesion() {
 
-    const token = localStorage.getItem("jwt_token");
-    const sessionId = localStorage.getItem("sessionId");
+    const tokenActual =
+        localStorage.getItem("jwt_token");
 
-    if (!token || !sessionId) {
-        alert("La sesión no tiene credenciales válidas.");
-        return;
-    }
+    const sessionId =
+        localStorage.getItem("sessionId");
 
     try {
-        const response = await fetch(
-            "http://localhost:8080/api/auth/logout",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    sessionId: sessionId
-                })
+
+        if (tokenActual && sessionId) {
+
+            const response = await fetch(
+                `${BASE}/auth/logout`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${tokenActual}`
+                    },
+                    body: JSON.stringify({
+                        sessionId: sessionId
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                console.warn(
+                    "No se pudo registrar la salida en SQL Server.",
+                    "HTTP:",
+                    response.status
+                );
             }
-        );
-
-        if (!response.ok) {
-            const detalle = await response.text();
-
-            console.error(
-                "Error al cerrar sesión:",
-                response.status,
-                detalle
-            );
-
-            throw new Error(
-                "No fue posible registrar la salida."
-            );
         }
 
+    } catch (error) {
+
+        console.warn(
+            "Error de conexión al registrar la salida:",
+            error
+        );
+
+    } finally {
+
+        // Cerrar la sesión local aunque el backend falle.
         localStorage.removeItem("jwt_token");
         localStorage.removeItem("username");
         localStorage.removeItem("roles");
         localStorage.removeItem("sessionId");
 
-        window.location.href = "./login.html";
-
-    } catch (error) {
-        console.error(error);
-        alert(error.message);
+        window.location.replace("./login.html");
     }
 }
+
 
 function mostrarMensaje(texto, tipo = "info") {
     mensaje.textContent = texto;
@@ -541,12 +545,12 @@ document.getElementById("canton").addEventListener(
 let clientesCache = [];
 
 function filtrarTablaClientes() {
- const q = (document.getElementById("buscarCliente")?.value || "").trim().toLocaleLowerCase();
- document.querySelectorAll("#tablaClientes tbody tr").forEach(fila => {
-   const id = (fila.cells[1]?.textContent || "").toLocaleLowerCase();
-   const nombre = (fila.cells[2]?.textContent || "").toLocaleLowerCase();
-   fila.hidden = !(id.includes(q) || nombre.includes(q));
- });
+    const q = (document.getElementById("buscarCliente")?.value || "").trim().toLocaleLowerCase();
+    document.querySelectorAll("#tablaClientes tbody tr").forEach(fila => {
+        const id = (fila.cells[1]?.textContent || "").toLocaleLowerCase();
+        const nombre = (fila.cells[2]?.textContent || "").toLocaleLowerCase();
+        fila.hidden = !(id.includes(q) || nombre.includes(q));
+    });
 }
 document.getElementById("buscarCliente")?.addEventListener("input", filtrarTablaClientes);
 
@@ -554,13 +558,16 @@ async function cargarClientes() {
 
     try {
 
-        const clientes =
-            await api("/clientes");
 
-        clientesCache =
-            Array.isArray(clientes)
-                ? clientes
-                : [];
+        const clientes = await api("/clientes");
+
+        clientesCache = Array.isArray(clientes)
+            ? clientes
+            : [];
+
+        // Cargar los clientes registrados en SQL Server
+        // en el selector del formulario de facturas.
+        cargarClientesFactura(clientesCache);
 
 
         if (clientesCache.length === 0) {
@@ -593,121 +600,109 @@ async function cargarClientes() {
                                 <th>Correo</th>
                                 <th>Teléfono</th>
                                 <th>Estado</th>
-                                ${
-                                    mostrarAcciones
-                                        ? "<th>Acciones</th>"
-                                        : ""
-                                }
+                                ${mostrarAcciones
+                ? "<th>Acciones</th>"
+                : ""
+            }
                             </tr>
                         </thead>
 
                         <tbody>
-                            ${
-                                clientesCache
-                                    .map(
-                                        cliente => {
+                            ${clientesCache
+                .map(
+                    cliente => {
 
-                                            const clienteId =
-                                                Number(
-                                                    valor(
-                                                        cliente,
-                                                        "clienteId",
-                                                        "ClienteID"
-                                                    )
-                                                );
+                        const clienteId =
+                            Number(
+                                valor(
+                                    cliente,
+                                    "clienteId",
+                                    "ClienteID"
+                                )
+                            );
 
 
-                                            return `
+                        return `
                                                 <tr>
-                                                    <td>${
-                                                        escaparHtml(
-                                                            clienteId
-                                                        )
-                                                    }</td>
+                                                    <td>${escaparHtml(
+                            clienteId
+                        )
+                            }</td>
 
-                                                    <td>${
-                                                        escaparHtml(
-                                                            valor(
-                                                                cliente,
-                                                                "numeroIdentificacion",
-                                                                "NumeroIdentificacion"
-                                                            )
-                                                        )
-                                                    }</td>
+                                                    <td>${escaparHtml(
+                                valor(
+                                    cliente,
+                                    "numeroIdentificacion",
+                                    "NumeroIdentificacion"
+                                )
+                            )
+                            }</td>
 
-                                                    <td>${
-                                                        escaparHtml(
-                                                            valor(
-                                                                cliente,
-                                                                "nombre",
-                                                                "Nombre"
-                                                            )
-                                                        )
-                                                    }</td>
+                                                    <td>${escaparHtml(
+                                valor(
+                                    cliente,
+                                    "nombre",
+                                    "Nombre"
+                                )
+                            )
+                            }</td>
 
-                                                    <td>${
-                                                        escaparHtml(
-                                                            valor(
-                                                                cliente,
-                                                                "provincia",
-                                                                "Provincia"
-                                                            )
-                                                        )
-                                                    }</td>
+                                                    <td>${escaparHtml(
+                                valor(
+                                    cliente,
+                                    "provincia",
+                                    "Provincia"
+                                )
+                            )
+                            }</td>
 
-                                                    <td>${
-                                                        escaparHtml(
-                                                            valor(
-                                                                cliente,
-                                                                "canton",
-                                                                "Canton"
-                                                            )
-                                                        )
-                                                    }</td>
+                                                    <td>${escaparHtml(
+                                valor(
+                                    cliente,
+                                    "canton",
+                                    "Canton"
+                                )
+                            )
+                            }</td>
 
-                                                    <td>${
-                                                        escaparHtml(
-                                                            valor(
-                                                                cliente,
-                                                                "distrito",
-                                                                "Distrito"
-                                                            )
-                                                        )
-                                                    }</td>
+                                                    <td>${escaparHtml(
+                                valor(
+                                    cliente,
+                                    "distrito",
+                                    "Distrito"
+                                )
+                            )
+                            }</td>
 
-                                                    <td>${
-                                                        escaparHtml(
-                                                            valor(
-                                                                cliente,
-                                                                "correoElectronico",
-                                                                "CorreoElectronico"
-                                                            )
-                                                        )
-                                                    }</td>
+                                                    <td>${escaparHtml(
+                                valor(
+                                    cliente,
+                                    "correoElectronico",
+                                    "CorreoElectronico"
+                                )
+                            )
+                            }</td>
 
-                                                    <td>${
-                                                        escaparHtml(
-                                                            valor(
-                                                                cliente,
-                                                                "telefono",
-                                                                "Telefono"
-                                                            )
-                                                        )
-                                                    }</td>
+                                                    <td>${escaparHtml(
+                                valor(
+                                    cliente,
+                                    "telefono",
+                                    "Telefono"
+                                )
+                            )
+                            }</td>
 
-                                                    <td>${
-                                                        escaparHtml(
-                                                            valor(
-                                                                cliente,
-                                                                "estado",
-                                                                "Estado"
-                                                            )
-                                                        )
-                                                    }</td>
+                                                    <td>${escaparHtml(
+                                valor(
+                                    cliente,
+                                    "estado",
+                                    "Estado"
+                                )
+                            )
+                            }</td>
 
-                                                    ${
-                                                        mostrarAcciones
-                                                            ? `
+                                                    ${mostrarAcciones
+                                ? `
                                                                 <td class="acciones-tabla">
 
                                                                     <button
@@ -718,9 +713,8 @@ async function cargarClientes() {
                                                                         Editar
                                                                     </button>
 
-                                                                    ${
-                                                                        esAdmin
-                                                                            ? `
+                                                                    ${esAdmin
+                                    ? `
                                                                                 <button
                                                                                     type="button"
                                                                                     class="btn-eliminar"
@@ -729,19 +723,19 @@ async function cargarClientes() {
                                                                                     Eliminar
                                                                                 </button>
                                                                             `
-                                                                            : ""
-                                                                    }
+                                    : ""
+                                }
 
                                                                 </td>
                                                             `
-                                                            : ""
-                                                    }
+                                : ""
+                            }
                                                 </tr>
                                             `;
-                                        }
-                                    )
-                                    .join("")
-                            }
+                    }
+                )
+                .join("")
+            }
                         </tbody>
                     </table>
                 </div>
@@ -750,12 +744,20 @@ async function cargarClientes() {
 
     } catch (error) {
 
-        document
-            .getElementById("tablaClientes")
-            .innerHTML = "";
-    }
-}
+        console.error("Error al cargar clientes:", error);
 
+        document.getElementById("tablaClientes").innerHTML = "";
+
+        // Limpiar el selector de facturas si falla la consulta.
+        cargarClientesFactura([]);
+
+        mostrarMensaje(
+            "No fue posible cargar los clientes desde la base de datos.",
+            "error"
+        );
+    }
+
+}
 
 async function editarClientePorId(id) {
 
@@ -1386,31 +1388,50 @@ document.getElementById("btnCancelarProducto").addEventListener(
 );
 
 
-/* IMPUESTOS*/
 
+/* IMPUESTOS */
+
+let impuestosCache = [];
+let impuestoEditandoId = null;
+
+// READ: cargar impuestos
 async function cargarTiposImpuestoCombo() {
     try {
         const data = await api("/impuestos");
 
+        impuestosCache = Array.isArray(data) ? data : [];
+
         ponerOpciones(
             document.getElementById("tipoImpuestoId"),
-            data,
-            item => valor(item, "tipoImpuestoId", "TipoImpuestoID", "id"),
-            item => {
-                const codigo = valor(item, "codigo", "Codigo");
-                const descripcion = valor(item, "descripcion", "Descripcion");
-                return `${codigo} - ${descripcion}`;
-            },
+            impuestosCache.filter(item => item.estado === "A"),
+            item => item.tipoImpuestoId,
+            item => `${item.codigo} - ${item.descripcion}`,
             "Seleccione impuesto..."
         );
 
         document.getElementById("tablaImpuestos").innerHTML =
-            crearTabla(data);
+            crearTablaConAcciones(
+                impuestosCache,
+                [
+                    ["codigo", "Código"],
+                    ["descripcion", "Descripción"],
+                    ["porcentaje", "Porcentaje"],
+                    ["tarifa", "Tarifa"],
+                    ["estado", "Estado"]
+                ],
+                "editarImpuesto",
+                "eliminarImpuesto",
+                ["tipoImpuestoId", "TipoImpuestoID"],
+                esAdmin,
+                esAdmin
+            );
+
     } catch (error) {
-        document.getElementById("tablaImpuestos").innerHTML = "";
+        mostrarMensaje(error.message, "error");
     }
 }
 
+// CREATE / UPDATE
 document.getElementById("impuestoForm").addEventListener(
     "submit",
     async event => {
@@ -1425,66 +1446,299 @@ document.getElementById("impuestoForm").addEventListener(
         }
 
         const dto = {
-            codigo:
-                document.getElementById("codigoImpuesto").value.trim(),
-            descripcion:
-                document.getElementById("descripcionImpuesto").value.trim(),
-            porcentaje:
-                parseFloat(document.getElementById("porcentaje").value),
-            tarifa:
-                parseFloat(document.getElementById("tarifa").value),
-            estado: "A"
+            codigo: document.getElementById("codigoImpuesto").value.trim(),
+            descripcion: document.getElementById("descripcionImpuesto").value.trim(),
+            porcentaje: Number(document.getElementById("porcentaje").value),
+            tarifa: Number(document.getElementById("tarifa").value),
+            estado: impuestoEditandoId === null
+                ? "A"
+                : impuestosCache.find(
+                    item => item.tipoImpuestoId === impuestoEditandoId
+                )?.estado || "A"
         };
 
         try {
-            await api("/impuestos", {
-                method: "POST",
-                body: JSON.stringify(dto)
-            });
+            const editando = impuestoEditandoId !== null;
 
-            document.getElementById("impuestoForm").reset();
+            await api(
+                editando
+                    ? `/impuestos/${impuestoEditandoId}`
+                    : "/impuestos",
+                {
+                    method: editando ? "PUT" : "POST",
+                    body: JSON.stringify(dto)
+                }
+            );
+
+            limpiarFormularioImpuesto();
             await cargarTiposImpuestoCombo();
 
-            mostrarMensaje("Impuesto guardado correctamente.", "exito");
+            mostrarMensaje(
+                editando
+                    ? "Impuesto actualizado correctamente."
+                    : "Impuesto creado correctamente.",
+                "exito"
+            );
+
         } catch (error) {
             mostrarMensaje(error.message, "error");
         }
     }
 );
 
+// UPDATE: completar formulario
+function editarImpuestoPorId(id) {
+    if (!esAdmin) return;
 
-/*FACTURAS */
+    const impuesto = impuestosCache.find(
+        item => Number(item.tipoImpuestoId) === Number(id)
+    );
+
+    if (!impuesto) return;
+
+    impuestoEditandoId = Number(id);
+
+    document.getElementById("codigoImpuesto").value =
+        impuesto.codigo;
+
+    document.getElementById("descripcionImpuesto").value =
+        impuesto.descripcion;
+
+    document.getElementById("porcentaje").value =
+        impuesto.porcentaje;
+
+    document.getElementById("tarifa").value =
+        impuesto.tarifa;
+
+    const boton = document.querySelector(
+        '#impuestoForm button[type="submit"]'
+    );
+
+    if (boton) boton.textContent = "Actualizar impuesto";
+
+    document.getElementById("impuestoForm")
+        .scrollIntoView({ behavior: "smooth" });
+}
+
+// DELETE
+async function eliminarImpuesto(id) {
+    if (!esAdmin) return;
+
+    if (!confirm("¿Desea eliminar este impuesto?")) {
+        return;
+    }
+
+    try {
+        await api(`/impuestos/${id}`, {
+            method: "DELETE"
+        });
+
+        limpiarFormularioImpuesto();
+        await cargarTiposImpuestoCombo();
+
+        mostrarMensaje(
+            "Impuesto eliminado correctamente.",
+            "exito"
+        );
+
+    } catch (error) {
+        mostrarMensaje(error.message, "error");
+    }
+}
+
+// Restablecer formulario
+function limpiarFormularioImpuesto() {
+    impuestoEditandoId = null;
+
+    document.getElementById("impuestoForm").reset();
+
+    const boton = document.querySelector(
+        '#impuestoForm button[type="submit"]'
+    );
+
+    if (boton) boton.textContent = "Guardar impuesto";
+}
+
+// Cancelar edición
+document.getElementById("btnCancelarImpuesto")
+    ?.addEventListener(
+        "click",
+        limpiarFormularioImpuesto
+    );
+
+
+
+/* FACTURAS Y CAJA REGISTRADORA*/
 
 let detalles = [];
+let totalCobroActual = 0;
+let productosCobro = [];
+let impuestosCobro = [];
+let registrandoCobro = false;
 
-document.getElementById("agregarDetalle").addEventListener(
-    "click",
-    () => {
-        const productoId = parseInt(
-            document.getElementById("detalleProductoId").value,
-            10
+const obtenerCobro = id => document.getElementById(id);
+
+function redondearCobro(n) {
+    return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+}
+
+function monedaCobro() {
+    const select = obtenerCobro("moneda");
+    const texto = select.options[select.selectedIndex]
+        ?.textContent?.toUpperCase() || "";
+
+    return texto.includes("USD") || texto.includes("DÓLAR")
+        ? "USD" : "CRC";
+}
+
+function formatoCobro(monto) {
+    const codigo = monedaCobro();
+    const simbolo = codigo === "USD" ? "$" : "₡";
+
+    return simbolo + Number(monto || 0)
+        .toLocaleString("es-CR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+}
+
+
+// Acepta importes escritos como 65000, 65.000,00 o 65000.50.
+function leerMontoCobro(texto) {
+    let valor = String(texto ?? "").trim().replace(/[₡$\s]/g, "");
+    if (!valor) return 0;
+    const coma = valor.lastIndexOf(",");
+    const punto = valor.lastIndexOf(".");
+    if (coma > punto) {
+        valor = valor.replace(/\./g, "").replace(",", ".");
+    } else if (coma >= 0 && punto > coma) {
+        valor = valor.replace(/,/g, "");
+    }
+    const numero = Number(valor);
+    return Number.isFinite(numero) && numero >= 0 ? numero : NaN;
+}
+
+function formatearMontoEntrada() {
+    const campo = obtenerCobro("montoRecibido");
+    const cantidad = leerMontoCobro(campo.value);
+    if (campo.value.trim() !== "" && Number.isFinite(cantidad)) {
+        campo.value = cantidad.toLocaleString("es-CR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+}
+
+// El identificador 1 es Efectivo en la tabla dbo.MedioPago del proyecto.
+function esPagoEfectivo() {
+    return Number(obtenerCobro("medioPago").value) === 1;
+}
+
+async function cargarDatosCobro() {
+    // Los importes se obtienen del catálogo real.
+    // El backend vuelve a calcularlos al registrar.
+    const [productos, impuestos] = await Promise.all([
+        api("/productos"),
+        api("/impuestos")
+    ]);
+
+    productosCobro = Array.isArray(productos) ? productos : [];
+    impuestosCobro = Array.isArray(impuestos) ? impuestos : [];
+}
+
+function valorCobro(objeto, camel, pascal) {
+    return objeto?.[camel] ?? objeto?.[pascal];
+}
+
+function calcularTotalCobro() {
+    let subtotal = 0;
+    let impuestos = 0;
+
+    for (const detalle of detalles) {
+
+        const producto = productosCobro.find(p =>
+            Number(valorCobro(
+                p, "productoServicioId", "ProductoServicioID"
+            )) === Number(detalle.productoServicioId)
         );
 
-        const cantidad = parseInt(
-            document.getElementById("detalleCantidad").value,
-            10
+        if (!producto) {
+            throw new Error(
+                "No se encontró el precio del producto: "
+                + detalle.descripcion
+            );
+        }
+
+        const precio = Number(valorCobro(
+            producto, "precio", "Precio"
+        ));
+
+        const impuestoId = Number(valorCobro(
+            producto, "tipoImpuestoId", "TipoImpuestoID"
+        ));
+
+        const impuesto = impuestosCobro.find(i =>
+            Number(valorCobro(
+                i, "tipoImpuestoId", "TipoImpuestoID"
+            )) === impuestoId
         );
 
-        if (
-            Number.isNaN(productoId)
-            || Number.isNaN(cantidad)
-            || cantidad < 1
-            || !Number.isInteger(cantidad)
-        ) {
+        if (!Number.isFinite(precio) || precio < 0 || !impuesto) {
+            throw new Error(
+                "Falta el precio o el impuesto de "
+                + detalle.descripcion
+            );
+        }
+
+        const porcentaje = Number(valorCobro(
+            impuesto, "porcentaje", "Porcentaje"
+        ));
+
+        if (!Number.isFinite(porcentaje)) {
+            throw new Error(
+                "Porcentaje de impuesto inválido."
+            );
+        }
+
+        // Aproximación para mostrar en la caja.
+        // SQL Server conserva el cálculo definitivo.
+        const linea = redondearCobro(
+            precio * detalle.cantidad
+        );
+
+        subtotal += linea;
+        impuestos += redondearCobro(
+            linea * porcentaje / 100
+        );
+    }
+
+    return redondearCobro(subtotal + impuestos);
+}
+
+/* AGREGAR PRODUCTOS */
+
+obtenerCobro("agregarDetalle").addEventListener(
+    "click", () => {
+
+        const productoId = Number(
+            obtenerCobro("detalleProductoId").value
+        );
+
+        const cantidad = Number(
+            obtenerCobro("detalleCantidad").value
+        );
+
+        if (!Number.isInteger(productoId) || productoId <= 0
+            || !Number.isInteger(cantidad) || cantidad < 1) {
+
             mostrarMensaje(
-                "Seleccione un producto o servicio e ingrese una cantidad entera mayor o igual a 1.",
+                "Seleccione un producto y una cantidad entera mayor a cero.",
                 "error"
             );
-
             return;
         }
 
-        const select = document.getElementById("detalleProductoId");
+        const select = obtenerCobro("detalleProductoId");
         const descripcion =
             select.options[select.selectedIndex]?.textContent || "";
 
@@ -1496,15 +1750,14 @@ document.getElementById("agregarDetalle").addEventListener(
 
         pintarDetallesFactura();
 
-        document.getElementById("detalleProductoId").value = "";
-        document.getElementById("detalleCantidad").value = "1";
+        select.value = "";
+        obtenerCobro("detalleCantidad").value = "1";
         limpiarMensaje();
     }
 );
 
 function pintarDetallesFactura() {
-    const contenedor =
-        document.getElementById("detallesFactura");
+    const contenedor = obtenerCobro("detallesFactura");
 
     if (detalles.length === 0) {
         contenedor.innerHTML = "";
@@ -1522,16 +1775,14 @@ function pintarDetallesFactura() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${detalles.map((detalle, indice) => `
+                    ${detalles.map((d, i) => `
                         <tr>
-                            <td>${escaparHtml(detalle.descripcion)}</td>
-                            <td>${detalle.cantidad}</td>
+                            <td>${escaparHtml(d.descripcion)}</td>
+                            <td>${d.cantidad}</td>
                             <td>
-                                <button
-                                    type="button"
-                                    class="btn-eliminar"
-                                    onclick="quitarDetalle(${indice})"
-                                >
+                                <button type="button"
+                                        class="btn-eliminar"
+                                        onclick="quitarDetalle(${i})">
                                     Quitar
                                 </button>
                             </td>
@@ -1548,97 +1799,182 @@ function quitarDetalle(indice) {
     pintarDetallesFactura();
 }
 
-document.getElementById("facturaForm").addEventListener(
-    "submit",
-    async event => {
-        event.preventDefault();
+/* REGISTRO DE FACTURAS Y CAJA DE EFECTIVO */
 
-        if (!esAdmin && !esDigitador) {
-            mostrarMensaje(
-                "Este usuario es solo de consulta.",
-                "error"
-            );
+obtenerCobro("facturaForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (registrandoCobro) return;
+    if (!esAdmin && !esDigitador) {
+        mostrarMensaje("Este usuario es solo de consulta.", "error");
+        return;
+    }
+    if (detalles.length === 0) {
+        mostrarMensaje("Debe agregar al menos un producto.", "error");
+        return;
+    }
+    if (!obtenerCobro("facturaForm").reportValidity()) return;
+
+    try {
+        await cargarDatosCobro();
+        totalCobroActual = calcularTotalCobro();
+        if (!Number.isFinite(totalCobroActual) || totalCobroActual <= 0) {
+            throw new Error("El importe de la factura debe ser mayor a cero.");
+        }
+
+        // Tarjeta, SINPE, transferencia y demás: pago completo SIN abrir caja.
+        if (!esPagoEfectivo()) {
+            await registrarFacturaCobro(totalCobroActual);
             return;
         }
 
-        if (detalles.length === 0) {
-            mostrarMensaje(
-                "Debe agregar al menos un detalle.",
-                "error"
-            );
+        // Únicamente para efectivo se abre la calculadora de vuelto.
+        obtenerCobro("cobroMedioSeleccionado").textContent =
+            obtenerCobro("medioPago").selectedOptions[0]?.textContent.trim()
+            || "Efectivo";
+        obtenerCobro("cobroCajero").textContent =
+            obtenerCobro("usuarioActual")?.textContent.trim()
+            || localStorage.getItem("username")
+            || "Usuario autenticado";
+        obtenerCobro("montoRecibido").value = "";
+        obtenerCobro("cobroTotal").textContent = formatoCobro(totalCobroActual);
+        obtenerCobro("cobroResumenTotal").textContent = formatoCobro(totalCobroActual);
+        obtenerCobro("modalCobro").hidden = false;
+        actualizarPantallaCobro();
+        obtenerCobro("montoRecibido").focus();
+    } catch (error) {
+        console.error("No se pudo procesar la factura:", error);
+        mostrarMensaje(error.message, "error");
+    }
+});
 
-            return;
+function actualizarPantallaCobro() {
+    const recibido = leerMontoCobro(obtenerCobro("montoRecibido").value);
+    const valido = Number.isFinite(recibido);
+    const diferencia = valido
+        ? redondearCobro(recibido - totalCobroActual)
+        : -totalCobroActual;
+    obtenerCobro("cobroEtiquetaDiferencia").textContent =
+        diferencia < 0 ? "Falta:" : "Vuelto:";
+    obtenerCobro("cobroDiferencia").textContent =
+        formatoCobro(Math.abs(diferencia));
+    obtenerCobro("cobroAviso").textContent = !valido
+        ? "Ingrese un importe válido."
+        : diferencia < 0
+            ? "Ingrese el importe completo."
+            : "Pago completo. Puede registrar la factura.";
+    obtenerCobro("confirmarCobro").disabled =
+        registrandoCobro || !valido || diferencia < 0;
+}
+
+obtenerCobro("montoRecibido").addEventListener("input", actualizarPantallaCobro);
+obtenerCobro("montoRecibido").addEventListener("blur", formatearMontoEntrada);
+
+obtenerCobro("cobroTeclado").addEventListener("click", event => {
+    const boton = event.target.closest("button");
+    if (!boton) return;
+    const tecla = boton.dataset.tecla;
+    const campo = obtenerCobro("montoRecibido");
+    // Teclado para ingresar colones completos. Los decimales pueden
+    // introducirse manualmente en el campo.
+    let valor = campo.value.replace(/[^\d]/g, "");
+    if (tecla === "C") valor = "";
+    else if (tecla === "B") valor = valor.slice(0, -1);
+    else valor += tecla;
+    campo.value = valor;
+    actualizarPantallaCobro();
+});
+
+async function registrarFacturaCobro(montoRecibido) {
+    if (registrandoCobro) return;
+    registrandoCobro = true;
+    const boton = obtenerCobro("confirmarCobro");
+    boton.disabled = true;
+
+    let registrada = false;
+    try {
+        const resultado = await api("/facturas", {
+            method: "POST",
+            body: JSON.stringify({
+                clienteId: Number(obtenerCobro("facturaClienteId").value),
+                condicionVentaId: Number(obtenerCobro("condicionVenta").value),
+                medioPagoId: Number(obtenerCobro("medioPago").value),
+                monedaId: Number(obtenerCobro("moneda").value),
+                tipoCambio: Number(obtenerCobro("tipoCambio").value),
+                observaciones: obtenerCobro("observacionesFactura").value.trim(),
+                montoRecibido: redondearCobro(montoRecibido),
+                detalles: detalles.map(d => ({
+                    productoServicioId: d.productoServicioId,
+                    cantidad: d.cantidad
+                }))
+            })
+        });
+        if (!resultado?.facturaId) {
+            throw new Error("No se recibió el identificador de la factura.");
         }
-
-        try {
-            await api("/facturas", {
-                method: "POST",
-                body: JSON.stringify({
-                    clienteId:
-                        parseInt(
-                            document.getElementById("facturaClienteId").value,
-                            10
-                        ),
-                    condicionVentaId: Number(document.getElementById("condicionVenta").value),
-                    medioPagoId: Number(document.getElementById("medioPago").value),
-                    monedaId: Number(document.getElementById("moneda").value),
-                    tipoCambio:
-                        parseFloat(
-                            document.getElementById("tipoCambio").value
-                        ),
-                    observaciones:
-                        document.getElementById("observacionesFactura").value.trim(),
-                    detalles:
-                        detalles.map(detalle => ({
-                            productoServicioId:
-                                detalle.productoServicioId,
-                            cantidad:
-                                detalle.cantidad
-                        }))
-                })
-            });
-
-            document.getElementById("facturaForm").reset();
-            document.getElementById("tipoCambio").value = "1";
-            document.getElementById("detalleCantidad").value = "1";
-
-            detalles = [];
-            pintarDetallesFactura();
-
-            await cargarFacturas();
-
-            mostrarMensaje(
-                "Factura creada correctamente.",
-                "exito"
-            );
-        } catch (error) {
+        registrada = true;
+        habilitarPdfFactura(resultado.facturaId);
+        obtenerCobro("modalCobro").hidden = true;
+        limpiarFormularioFactura();
+        mostrarMensaje(`Factura #${resultado.facturaId} registrada correctamente. Ya puede descargar el PDF.`, "exito");
+        // Una falla al actualizar la tabla no debe confundirse con
+        // una falla al registrar la factura (evita ventas duplicadas).
+        await cargarFacturas();
+    } catch (error) {
+        console.error("Error al registrar factura:", error);
+        if (!registrada) {
+            obtenerCobro("cobroAviso").textContent = error.message;
             mostrarMensaje(error.message, "error");
         }
+    } finally {
+        registrandoCobro = false;
+        if (!obtenerCobro("modalCobro").hidden) actualizarPantallaCobro();
+        else boton.disabled = false;
     }
-);
+}
 
-document.getElementById("btnCancelarFactura").addEventListener(
-    "click",
-    () => {
-        document.getElementById("facturaForm").reset();
-        document.getElementById("tipoCambio").value = "1";
-        document.getElementById("detalleCantidad").value = "1";
-        detalles = [];
-        pintarDetallesFactura();
-        limpiarMensaje();
+obtenerCobro("confirmarCobro").addEventListener("click", async () => {
+    if (registrandoCobro) return;
+    const recibido = leerMontoCobro(obtenerCobro("montoRecibido").value);
+    if (!Number.isFinite(recibido) || recibido < totalCobroActual) {
+        obtenerCobro("cobroAviso").textContent = "El monto recibido es insuficiente.";
+        return;
     }
-);
+    await registrarFacturaCobro(recibido);
+});
+
+function cerrarCobro() {
+    if (registrandoCobro) return;
+    obtenerCobro("modalCobro").hidden = true;
+}
+obtenerCobro("cerrarModalCobro").addEventListener("click", cerrarCobro);
+obtenerCobro("cancelarCobro").addEventListener("click", cerrarCobro);
+
+function limpiarFormularioFactura() {
+    obtenerCobro("facturaForm").reset();
+    obtenerCobro("tipoCambio").value = "1";
+    obtenerCobro("detalleCantidad").value = "1";
+    detalles = [];
+    pintarDetallesFactura();
+}
+obtenerCobro("btnCancelarFactura").addEventListener("click", () => {
+    limpiarFormularioFactura();
+    limpiarMensaje();
+});
+
+/* CONSULTAR FACTURAS */
 
 async function cargarFacturas() {
     try {
         const data = await api("/facturas");
         cargarFacturasNota(data);
-        document.getElementById("tablaFacturas").innerHTML =
+        obtenerCobro("tablaFacturas").innerHTML =
             crearTabla(data);
-    } catch {
-        document.getElementById("tablaFacturas").innerHTML = "";
+    } catch (error) {
+        console.error("Error al cargar facturas:", error);
+        obtenerCobro("tablaFacturas").innerHTML = "";
     }
 }
+
 
 
 /* NOTAS*/
@@ -1677,7 +2013,7 @@ document.getElementById("notaForm").addEventListener(
             });
 
             document.getElementById("notaForm").reset();
-            document.getElementById("fechaNota").value = new Date().toISOString().slice(0,10);
+            document.getElementById("fechaNota").value = new Date().toISOString().slice(0, 10);
             await cargarNotas();
 
             mostrarMensaje("Nota guardada correctamente.", "exito");
@@ -1702,42 +2038,36 @@ async function cargarNotas() {
 
 async function reporteClientes() {
     ejecutarReporte(
-        `/reportes/clientes?desde=${
-            encodeURIComponent(
-                document.getElementById("reporteDesde").value
-            )
-        }&hasta=${
-            encodeURIComponent(
-                document.getElementById("reporteHasta").value
-            )
+        `/reportes/clientes?desde=${encodeURIComponent(
+            document.getElementById("reporteDesde").value
+        )
+        }&hasta=${encodeURIComponent(
+            document.getElementById("reporteHasta").value
+        )
         }&estado=TODOS`
     );
 }
 
 async function reporteFacturas() {
     ejecutarReporte(
-        `/reportes/facturas?desde=${
-            encodeURIComponent(
-                document.getElementById("reporteDesde").value
-            )
-        }&hasta=${
-            encodeURIComponent(
-                document.getElementById("reporteHasta").value
-            )
+        `/reportes/facturas?desde=${encodeURIComponent(
+            document.getElementById("reporteDesde").value
+        )
+        }&hasta=${encodeURIComponent(
+            document.getElementById("reporteHasta").value
+        )
         }`
     );
 }
 
 async function reporteAuditoria() {
     ejecutarReporte(
-        `/reportes/auditoria?desde=${
-            encodeURIComponent(
-                document.getElementById("reporteDesde").value
-            )
-        }&hasta=${
-            encodeURIComponent(
-                document.getElementById("reporteHasta").value
-            )
+        `/reportes/auditoria?desde=${encodeURIComponent(
+            document.getElementById("reporteDesde").value
+        )
+        }&hasta=${encodeURIComponent(
+            document.getElementById("reporteHasta").value
+        )
         }&usuario=TODOS`
     );
 }
@@ -1774,22 +2104,21 @@ function crearTabla(datos) {
                 <thead>
                     <tr>
                         ${columnas.map(
-                            columna =>
-                                `<th>${escaparHtml(columna)}</th>`
-                        ).join("")}
+        columna =>
+            `<th>${escaparHtml(columna)}</th>`
+    ).join("")}
                     </tr>
                 </thead>
                 <tbody>
                     ${datos.map(fila => `
                         <tr>
                             ${columnas.map(
-                                columna =>
-                                    `<td>${
-                                        escaparHtml(
-                                            fila[columna]
-                                        )
-                                    }</td>`
-                            ).join("")}
+        columna =>
+            `<td>${escaparHtml(
+                fila[columna]
+            )
+            }</td>`
+    ).join("")}
                         </tr>
                     `).join("")}
                 </tbody>
@@ -1822,74 +2151,66 @@ function crearTablaConAcciones(
             <table>
                 <thead>
                     <tr>
-                        ${
-                            columnas
-                                .map(
-                                    columna =>
-                                        `<th>${
-                                            escaparHtml(
-                                                columna[1]
-                                            )
-                                        }</th>`
-                                )
-                                .join("")
-                        }
+                        ${columnas
+            .map(
+                columna =>
+                    `<th>${escaparHtml(
+                        columna[1]
+                    )
+                    }</th>`
+            )
+            .join("")
+        }
 
-                        ${
-                            mostrarAcciones
-                                ? "<th>Acciones</th>"
-                                : ""
-                        }
+                        ${mostrarAcciones
+            ? "<th>Acciones</th>"
+            : ""
+        }
                     </tr>
                 </thead>
 
                 <tbody>
-                    ${
-                        datos
-                            .map(
-                                item => {
+                    ${datos
+            .map(
+                item => {
 
-                                    const id =
-                                        Number(
-                                            valor(
-                                                item,
-                                                ...posiblesId
-                                            )
-                                        );
+                    const id =
+                        Number(
+                            valor(
+                                item,
+                                ...posiblesId
+                            )
+                        );
 
 
-                                    return `
+                    return `
                                         <tr>
 
-                                            ${
-                                                columnas
-                                                    .map(
-                                                        columna => `
-                                                            <td>${
-                                                                escaparHtml(
-                                                                    valor(
-                                                                        item,
-                                                                        columna[0],
-                                                                        columna[0][0]
-                                                                            .toUpperCase()
-                                                                            + columna[0]
-                                                                                .slice(1)
-                                                                    )
-                                                                )
-                                                            }</td>
+                                            ${columnas
+                            .map(
+                                columna => `
+                                                            <td>${escaparHtml(
+                                    valor(
+                                        item,
+                                        columna[0],
+                                        columna[0][0]
+                                            .toUpperCase()
+                                        + columna[0]
+                                            .slice(1)
+                                    )
+                                )
+                                    }</td>
                                                         `
-                                                    )
-                                                    .join("")
-                                            }
+                            )
+                            .join("")
+                        }
 
-                                            ${
-                                                mostrarAcciones
-                                                    ? `
+                                            ${mostrarAcciones
+                            ? `
                                                         <td class="acciones-tabla">
 
-                                                            ${
-                                                                permitirEditar
-                                                                    ? `
+                                                            ${permitirEditar
+                                ? `
                                                                         <button
                                                                             type="button"
                                                                             class="btn-editar"
@@ -1898,12 +2219,11 @@ function crearTablaConAcciones(
                                                                             Editar
                                                                         </button>
                                                                     `
-                                                                    : ""
-                                                            }
+                                : ""
+                            }
 
-                                                            ${
-                                                                permitirEliminar
-                                                                    ? `
+                                                            ${permitirEliminar
+                                ? `
                                                                         <button
                                                                             type="button"
                                                                             class="btn-eliminar"
@@ -1912,20 +2232,20 @@ function crearTablaConAcciones(
                                                                             Eliminar
                                                                         </button>
                                                                     `
-                                                                    : ""
-                                                            }
+                                : ""
+                            }
 
                                                         </td>
                                                     `
-                                                    : ""
-                                            }
+                            : ""
+                        }
 
                                         </tr>
                                     `;
-                                }
-                            )
-                            .join("")
-                    }
+                }
+            )
+            .join("")
+        }
                 </tbody>
             </table>
         </div>
@@ -1957,37 +2277,148 @@ async function cargarCatalogosAdicionales() {
 }
 function cargarClientesFactura(clientes) {
     ponerOpciones(document.getElementById("facturaClienteId"),
-       (clientes || []).filter(c => valor(c,"estado","Estado") === "A"),
-       c => valor(c,"clienteId","ClienteID"),
-       c => `${valor(c,"numeroIdentificacion","NumeroIdentificacion")} - ${valor(c,"nombre","Nombre")}`,
-       "Seleccione cliente...");
+        (clientes || []).filter(c => valor(c, "estado", "Estado") === "A"),
+        c => valor(c, "clienteId", "ClienteID"),
+        c => `${valor(c, "numeroIdentificacion", "NumeroIdentificacion")} - ${valor(c, "nombre", "Nombre")}`,
+        "Seleccione cliente...");
 }
 function cargarFacturasNota(facturas) {
     ponerOpciones(document.getElementById("notaFacturaId"), facturas || [],
-       f => valor(f,"facturaId","FacturaID"),
-       f => `Factura #${valor(f,"facturaId","FacturaID")}`,
-       "Seleccione factura...");
+        f => valor(f, "facturaId", "FacturaID"),
+        f => `Factura #${valor(f, "facturaId", "FacturaID")}`,
+        "Seleccione factura...");
 }
 
-/* INICIO*/
+
+/* INICIO DEL SISTEMA */
 
 async function iniciar() {
+
     configurarRol();
-    document.getElementById("fechaNota").value = new Date().toISOString().slice(0,10);
-    await cargarCatalogosAdicionales();
 
-    await Promise.all([
-        cargarProvincias(),
-        cargarActividadesEconomicas(),
-        cargarClientes(),
-        cargarFacturas(),
-        cargarNotas()
-    ]);
+    document.getElementById("fechaNota").value =
+        new Date().toISOString().slice(0, 10);
 
+    console.log("Iniciando carga de datos desde SQL Server...");
 
-    await cargarCabysCrud();
-    await cargarProductos();
-    await cargarTiposImpuestoCombo();
+    const tareas = [
+        ["Catálogos adicionales", cargarCatalogosAdicionales],
+        ["Provincias", cargarProvincias],
+        ["Actividades económicas", cargarActividadesEconomicas],
+        ["Clientes", cargarClientes],
+        ["Facturas", cargarFacturas],
+        ["Notas", cargarNotas],
+        ["CABYS", cargarCabysCrud],
+        ["Productos", cargarProductos],
+        ["Impuestos", cargarTiposImpuestoCombo]
+    ];
+
+    const resultados = await Promise.allSettled(
+        tareas.map(async ([nombre, funcion]) => {
+
+            console.log("Cargando:", nombre);
+
+            await funcion();
+
+            console.log("Finalizó:", nombre);
+        })
+    );
+
+    resultados.forEach((resultado, indice) => {
+        if (resultado.status === "rejected") {
+            console.error(
+                "Falló la carga de " + tareas[indice][0],
+                resultado.reason
+            );
+        }
+    });
+
+    console.log("Finalizó la carga inicial del sistema.");
 }
 
-iniciar();
+iniciar().catch(error => {
+    console.error("Error durante el inicio:", error);
+
+    mostrarMensaje(
+        "Ocurrió un error al iniciar el sistema. Revise la consola.",
+        "error"
+    );
+});
+
+
+
+
+/* DESCARGAR COMPROBANTE PDF */
+
+let ultimaFacturaPdfId = null;
+
+function habilitarPdfFactura(facturaId) {
+    ultimaFacturaPdfId = Number(facturaId);
+
+    const boton = document.getElementById(
+        "btnDescargarFacturaPdf"
+    );
+
+    if (boton) {
+        boton.disabled = !ultimaFacturaPdfId;
+    }
+}
+
+document.getElementById("btnDescargarFacturaPdf")
+    ?.addEventListener("click", async () => {
+
+        if (!ultimaFacturaPdfId) {
+            mostrarMensaje(
+                "Primero debe registrar una factura.",
+                "error"
+            );
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `${BASE}/facturas/${ultimaFacturaPdfId}/pdf`,
+                {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                }
+            );
+
+
+            if (!response.ok) {
+
+                const detalleError = await response.text();
+
+                console.error(
+                    "Error al generar PDF:",
+                    "Estado HTTP:", response.status,
+                    "Respuesta del backend:", detalleError
+                );
+
+                throw new Error(
+                    "Error al generar PDF (HTTP "
+                    + response.status
+                    + "). Revisa la terminal de Spring Boot."
+                );
+            }
+
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+
+            const enlace = document.createElement("a");
+            enlace.href = url;
+            enlace.download =
+                `Factura_Propi_${ultimaFacturaPdfId}.pdf`;
+
+            document.body.appendChild(enlace);
+            enlace.click();
+            enlace.remove();
+
+            URL.revokeObjectURL(url);
+
+        } catch (error) {
+            mostrarMensaje(error.message, "error");
+        }
+    });

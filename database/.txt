@@ -12,6 +12,7 @@ $env:JWT_SECRET = -join ((1..48) | ForEach-Object { 'abcdefghijklmnopqrstuvwxyzA
 
 
 C:\cloudflared.exe access tcp --hostname capibara.world --url localhost:14333
+C:\cloudflared.exe access tcp --hostname sql.capibara.world --url 127.0.0.1:14333
 
 cd "C:\Users\Carlos\Documents\Proyecto BD2\propi\backend"
 .\mvnw.cmd clean compile

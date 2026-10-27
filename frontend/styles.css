@@ -1253,3 +1253,239 @@ th {
         font-size: 1.6rem;
     }
 }
+
+
+
+/* CAJA REGISTRADORA - PROPTECH PROPI */
+
+.cobro-fondo[hidden],
+.cobro-teclado[hidden] {
+    display: none !important;
+}
+
+.cobro-fondo {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(27, 32, 64, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+}
+
+.cobro-ventana {
+    width: min(900px, 100%);
+    max-height: 92vh;
+    overflow-y: auto;
+    background: #ffffff;
+    border-radius: 22px;
+    padding: 28px;
+    box-shadow: 0 20px 65px rgba(35, 28, 80, 0.28);
+    color: #302b52;
+}
+
+.cobro-encabezado {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+    border-bottom: 1px solid #dce8ee;
+    padding-bottom: 15px;
+}
+
+.cobro-encabezado h2 {
+    margin: 0;
+    color: #4a3687;
+}
+
+.cobro-cerrar {
+    border: none;
+    background: #ece8f7;
+    color: #49378e;
+    font-size: 24px;
+    border-radius: 9px;
+    cursor: pointer;
+    padding: 4px 13px;
+}
+
+.cobro-columnas {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.cobro-etiqueta {
+    display: block;
+    font-weight: 700;
+    margin: 10px 0;
+}
+
+.cobro-total {
+    padding: 25px 12px;
+    border: 2px solid #45c4bb;
+    border-radius: 12px;
+    background: #e8f9f7;
+    color: #118d93;
+    text-align: center;
+    font-size: clamp(24px, 4vw, 36px);
+    font-weight: 800;
+    margin-bottom: 20px;
+}
+
+.cobro-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 2px solid #b6dedf;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 21px;
+    text-align: center;
+    margin-bottom: 12px;
+    background: #f9fcff;
+}
+
+.cobro-input:disabled {
+    background: #f0f0f4;
+    color: #7b7b89;
+}
+
+.cobro-teclado {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 9px;
+}
+
+.cobro-teclado button {
+    padding: 15px 6px;
+    border: 1px solid #cfd9e6;
+    border-radius: 9px;
+    background: #eef3fa;
+    color: #372e69;
+    font-size: 19px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.cobro-teclado button:hover {
+    background: #ddd6f7;
+}
+
+.cobro-metodos {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.cobro-metodo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #d7dfeb;
+    border-radius: 10px;
+    cursor: pointer;
+    background: #fafcff;
+}
+
+.cobro-metodo:has(input:checked) {
+    background: #e6f8f6;
+    border: 2px solid #27b8a7;
+}
+
+.cobro-metodo input {
+    accent-color: #159ba3;
+}
+
+.cobro-cajero {
+    border-radius: 9px;
+    padding: 12px;
+    background: #eee9f9;
+    font-weight: 700;
+}
+
+.cobro-resumen {
+    margin-top: 20px;
+    padding: 17px;
+    background: #edf7f9;
+    border-radius: 12px;
+}
+
+.cobro-resumen p {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 10px 0;
+}
+
+.cobro-resumen strong {
+    color: #42318b;
+}
+
+#cobroAviso {
+    color: #a03540;
+    font-size: 13px;
+}
+
+.cobro-acciones {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 25px;
+    border-top: 1px solid #e1e5ef;
+    padding-top: 20px;
+}
+
+.cobro-acciones button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+    .cobro-columnas {
+        grid-template-columns: 1fr;
+    }
+
+    .cobro-ventana {
+        padding: 18px;
+    }
+
+    .cobro-acciones button {
+        flex: 1;
+    }
+}
+
+
+/* AJUSTES FINALES DE LA CAJA */
+
+.cobro-metodo-seleccionado {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 18px;
+    border: 2px solid #1db8b0;
+    border-radius: 12px;
+    background: #e7f8f6;
+    color: #322c5e;
+    margin-bottom: 24px;
+}
+
+.cobro-metodo-seleccionado strong {
+    color: #118d93;
+    font-size: 18px;
+}
+
+.cobro-input {
+    font-weight: 700;
+    color: #118d93;
+    font-variant-numeric: tabular-nums;
+}
+
+.cobro-input[hidden],
+.cobro-etiqueta[hidden] {
+    display: none !important;
+}
