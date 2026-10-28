@@ -1,0 +1,16 @@
+POST http://localhost:8080/api/notas
+Content-Type: application/json
+Authorization: Bearer User
+
+{
+  "fecha": "2026-10-27",
+  "facturaId": 1050,
+  "tipo": "C",
+  "motivo": "Devolución de mercadería defectuosa",
+  "monto": 15000.00
+}
+
+#prueba para eliminar nota
+DELETE http://localhost:8080/api/notas/1
+Content-Type: application/json
+Authorization: Bearer ADMINISTRADOR
