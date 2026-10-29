@@ -1977,61 +1977,208 @@ async function cargarFacturas() {
 
 
 
-/* NOTAS*/
 
-document.getElementById("notaForm").addEventListener(
-    "submit",
-    async event => {
-        event.preventDefault();
+/* NOTAS */
 
-        if (!esAdmin && !esDigitador) {
-            mostrarMensaje(
-                "Este usuario es solo de consulta.",
-                "error"
-            );
-            return;
-        }
+// Elementos del formulario
+const notaForm = document.getElementById("notaForm");
+const codigoMotivoNota = document.getElementById("codigoMotivoNota");
+const motivoNota = document.getElementById("motivoNota");
+const tipoNota = document.getElementById("tipoNota");
 
-        try {
-            await api("/notas", {
-                method: "POST",
-                body: JSON.stringify({
-                    codigo:
-                        document.getElementById("codigoNota").value.trim(),
-                    facturaId:
-                        parseInt(
-                            document.getElementById("notaFacturaId").value,
-                            10
-                        ),
-                    tipo:
-                        document.getElementById("tipoNota").value,
-                    fecha: document.getElementById("fechaNota").value,
-                    monto: Number(document.getElementById("montoNota").value),
-                    motivo:
-                        document.getElementById("motivoNota").value.trim()
-                })
-            });
+// Actualizar el motivo según el código seleccionado
+function actualizarMotivoNota() {
+    const codigo = codigoMotivoNota.value;
 
-            document.getElementById("notaForm").reset();
-            document.getElementById("fechaNota").value = new Date().toISOString().slice(0, 10);
-            await cargarNotas();
-
-            mostrarMensaje("Nota guardada correctamente.", "exito");
-        } catch (error) {
-            mostrarMensaje(error.message, "error");
-        }
+    if (!codigo) {
+        motivoNota.value = "";
+        motivoNota.readOnly = false;
+        return;
     }
-);
 
+    if (codigo === "99") {
+        motivoNota.value = "";
+        motivoNota.readOnly = false;
+        motivoNota.placeholder = "Explique el motivo de la nota";
+        return;
+    }
+
+    const opcion = codigoMotivoNota.options[
+        codigoMotivoNota.selectedIndex
+    ];
+
+    // Quitar el código inicial de la descripción
+    motivoNota.value = opcion.textContent
+        .trim()
+        .replace(/^\d{2}\s*-\s*/, "");
+
+    motivoNota.readOnly = true;
+}
+
+// Cambiar descripción cuando se selecciona un motivo
+codigoMotivoNota.addEventListener("change", actualizarMotivoNota);
+
+// Evitar motivos financieros incompatibles con el tipo
+function actualizarOpcionesMotivo() {
+    const tipo = tipoNota.value;
+
+    Array.from(codigoMotivoNota.options).forEach(opcion => {
+        opcion.disabled = false;
+
+        if (tipo === "C" && opcion.value === "10") {
+            opcion.disabled = true;
+        }
+
+        if (
+            tipo === "D" &&
+            ["09", "12"].includes(opcion.value)
+        ) {
+            opcion.disabled = true;
+        }
+    });
+
+    if (
+        codigoMotivoNota.selectedOptions.length &&
+        codigoMotivoNota.selectedOptions[0].disabled
+    ) {
+        codigoMotivoNota.value = "";
+        motivoNota.value = "";
+    }
+
+    actualizarMotivoNota();
+}
+
+tipoNota.addEventListener("change", actualizarOpcionesMotivo);
+
+// Guardar nota
+notaForm.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    // Mantener permisos originales
+    if (!esAdmin && !esDigitador) {
+        mostrarMensaje(
+            "Este usuario es solo de consulta.",
+            "error"
+        );
+        return;
+    }
+
+    const codigoMotivo = codigoMotivoNota.value;
+    const motivo = motivoNota.value.trim();
+
+    if (!codigoMotivo) {
+        mostrarMensaje(
+            "Debe seleccionar el código del motivo.",
+            "error"
+        );
+        return;
+    }
+
+    if (!motivo) {
+        mostrarMensaje(
+            "Debe indicar el motivo de la nota.",
+            "error"
+        );
+        return;
+    }
+
+    try {
+        await api("/notas", {
+            method: "POST",
+
+            body: JSON.stringify({
+                codigo:
+                    document.getElementById("codigoNota").value.trim(),
+
+                facturaId:
+                    parseInt(
+                        document.getElementById("notaFacturaId").value,
+                        10
+                    ),
+
+                tipo:
+                    document.getElementById("tipoNota").value,
+
+                codigoMotivo:
+                    codigoMotivo,
+
+                motivo:
+                    motivo,
+
+                fecha:
+                    document.getElementById("fechaNota").value,
+
+                monto:
+                    Number(
+                        document.getElementById("montoNota").value
+                    )
+            })
+        });
+
+        // Limpiar formulario
+        notaForm.reset();
+
+        // Restaurar fecha actual
+        document.getElementById("fechaNota").value =
+            obtenerFechaLocalNota();
+
+        motivoNota.readOnly = false;
+        actualizarOpcionesMotivo();
+
+        // Actualizar listado
+        await cargarNotas();
+
+        mostrarMensaje(
+            "Nota guardada correctamente.",
+            "exito"
+        );
+
+    } catch (error) {
+        mostrarMensaje(
+            error.message,
+            "error"
+        );
+    }
+});
+
+// Obtener la fecha local del equipo
+function obtenerFechaLocalNota() {
+    const fecha = new Date();
+
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    const dia = String(fecha.getDate()).padStart(2, "0");
+
+    return `${anio}-${mes}-${dia}`;
+}
+
+// Mostrar notas
 async function cargarNotas() {
     try {
         const data = await api("/notas");
+
         document.getElementById("tablaNotas").innerHTML =
             crearTabla(data);
-    } catch {
+
+    } catch (error) {
         document.getElementById("tablaNotas").innerHTML = "";
+
+        mostrarMensaje(
+            error.message || "No se pudieron cargar las notas.",
+            "error"
+        );
     }
 }
+
+// Inicializar los campos
+actualizarOpcionesMotivo();
+
+notaForm.addEventListener("reset", () => {
+    // Ejecutar después del restablecimiento nativo
+    queueMicrotask(() => {
+        actualizarOpcionesMotivo();
+    });
+});
 
 
 /*  REPORTES*/

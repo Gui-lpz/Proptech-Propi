@@ -479,7 +479,8 @@
                         <div>
                             <p class="cobro-etiqueta">Método de pago</p>
 
-                            <div class="cobro-metodo-seleccionado" style="display:flex;justify-content:space-between;gap:12px;padding:14px;border:2px solid #1db8b0;border-radius:12px;background:#e7f8f6;margin-bottom:18px;">
+                            <div class="cobro-metodo-seleccionado"
+                                style="display:flex;justify-content:space-between;gap:12px;padding:14px;border:2px solid #1db8b0;border-radius:12px;background:#e7f8f6;margin-bottom:18px;">
                                 <span>Forma de pago</span>
                                 <strong id="cobroMedioSeleccionado">Efectivo</strong>
                             </div>
@@ -517,7 +518,8 @@
 
 
 
-            <!-- NOTAS-->
+
+            <!-- NOTAS -->
             <section id="notas" class="panel oculto">
                 <div class="panel-header">
                     <p class="panel-etiqueta">Documentos</p>
@@ -525,11 +527,14 @@
                 </div>
 
                 <form id="notaForm" class="form-grid">
+
+                    <!-- Código consecutivo generado por el backend -->
                     <div class="campo">
                         <label for="codigoNota">Código</label>
-                        <input id="codigoNota" required>
+                        <input id="codigoNota" type="text" placeholder="Generado automáticamente" readonly>
                     </div>
 
+                    <!-- Factura relacionada -->
                     <div class="campo">
                         <label for="notaFacturaId">Factura</label>
                         <select id="notaFacturaId" required>
@@ -537,29 +542,124 @@
                         </select>
                     </div>
 
+                    <!-- Tipo de comprobante -->
                     <div class="campo">
                         <label for="tipoNota">Tipo</label>
-                        <select id="tipoNota">
+                        <select id="tipoNota" required>
                             <option value="C">Crédito</option>
                             <option value="D">Débito</option>
                         </select>
                     </div>
 
-                    <div class="campo campo-doble">
-                        <label for="motivoNota">Motivo</label>
-                        <textarea id="motivoNota" rows="2" required></textarea>
+                    <!-- Código del motivo de Hacienda -->
+                    <div class="campo">
+                        <label for="codigoMotivoNota">
+                            Código del motivo (Hacienda)
+                        </label>
+
+                        <select id="codigoMotivoNota" required>
+                            <option value="">
+                                Seleccione un motivo...
+                            </option>
+
+                            <option value="01">
+                                01 - Anula documento de referencia
+                            </option>
+
+                            <option value="02">
+                                02 - Corrige monto
+                            </option>
+
+                            <option value="04">
+                                04 - Referencia a otro documento
+                            </option>
+
+                            <option value="05">
+                                05 - Sustituye comprobante provisional por contingencia
+                            </option>
+
+                            <option value="06">
+                                06 - Devolución de mercancía
+                            </option>
+
+                            <option value="07">
+                                07 - Sustituye comprobante electrónico
+                            </option>
+
+                            <option value="08">
+                                08 - Factura endosada
+                            </option>
+
+                            <option value="09">
+                                09 - Nota de crédito financiera
+                            </option>
+
+                            <option value="10">
+                                10 - Nota de débito financiera
+                            </option>
+
+                            <option value="11">
+                                11 - Proveedor no domiciliado
+                            </option>
+
+                            <option value="12">
+                                12 - Crédito por exoneración posterior a la facturación
+                            </option>
+
+                            <option value="13">
+                                13 - Anula documento por error material
+                            </option>
+
+                            <option value="14">
+                                14 - Corrige monto por error material
+                            </option>
+
+                            <option value="15">
+                                15 - Sustituye comprobante electrónico por error material
+                            </option>
+
+                            <option value="16">
+                                16 - Sustituye comprobante electrónico rechazado
+                            </option>
+
+                            <option value="99">
+                                99 - Otros
+                            </option>
+                        </select>
                     </div>
 
-                    <div class="campo"><label for="fechaNota">Fecha</label><input type="date" id="fechaNota" required>
+                    <!-- Descripción del motivo -->
+                    <div class="campo campo-doble">
+                        <label for="motivoNota">Motivo</label>
+                        <textarea id="motivoNota" rows="2" maxlength="500" placeholder="Seleccione un código de motivo"
+                            required></textarea>
                     </div>
-                    <div class="campo"><label for="montoNota">Monto</label><input type="number" id="montoNota"
-                            min="0.01" step="0.01" required></div>
+
+                    <!-- Fecha -->
+                    <div class="campo">
+                        <label for="fechaNota">Fecha</label>
+                        <input type="date" id="fechaNota" required>
+                    </div>
+
+                    <!-- Monto -->
+                    <div class="campo">
+                        <label for="montoNota">Monto</label>
+                        <input type="number" id="montoNota" min="0.01" step="0.01" required>
+                    </div>
+
+                    <!-- Botones -->
                     <div class="acciones-form campo-ancho">
-                        <button type="submit" class="btn-principal">Guardar nota</button>
-                        <button type="reset" class="btn-cancelar">Cancelar</button>
+                        <button type="submit" class="btn-principal">
+                            Guardar nota
+                        </button>
+
+                        <button type="reset" class="btn-cancelar">
+                            Cancelar
+                        </button>
                     </div>
                 </form>
 
+                <!-- Tabla de notas registradas -->
                 <div id="tablaNotas" class="tabla-contenedor"></div>
             </section>
 
