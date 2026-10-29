@@ -1,3 +1,4 @@
+
 package cr.ac.ucr.paraiso.propi.data;
 
 import java.util.List;
@@ -21,10 +22,19 @@ public class NotaRepository {
         return jdbcTemplate.queryForList(
                 "EXEC dbo.sp_NotasCreditoDebito_Listar");
     }
-public void guardar(NotaDTO dto) {
-        String sql = "EXEC dbo.sp_NotasCreditoDebito_Guardar @NotaID=?, @Codigo=?, @Fecha=?, @FacturaID=?, @Tipo=?, @Motivo=?, @Monto=?";
-        
-        // Usamos queryForObject para capturar el SELECT @NotaID final del procedimiento
+
+    public void guardar(NotaDTO dto) {
+
+        String sql = "EXEC dbo.sp_NotasCreditoDebito_Guardar " +
+                "@NotaID=?, " +
+                "@Codigo=?, " +
+                "@Fecha=?, " +
+                "@FacturaID=?, " +
+                "@Tipo=?, " +
+                "@CodigoMotivo=?, " +
+                "@Motivo=?, " +
+                "@Monto=?";
+
         Integer notaIdGenerado = jdbcTemplate.queryForObject(
                 sql,
                 Integer.class,
@@ -33,38 +43,28 @@ public void guardar(NotaDTO dto) {
                 dto.getFecha(),
                 dto.getFacturaId(),
                 dto.getTipo(),
+                dto.getCodigoMotivo(),
                 dto.getMotivo(),
-                dto.getMonto()
-        );
-        
-    
+                dto.getMonto());
+
         dto.setNotaId(notaIdGenerado);
     }
-      //esto es para la generación delcodigo consecutivo en cada nota
-    public long obtenerSiguienteSecuencial(String tipo) {
-    String sql = "SELECT ISNULL(MAX(CAST(RIGHT(Codigo, 10) AS BIGINT)), 0) + 1 " +
-                 "FROM dbo.NotasCreditoDebito WHERE Tipo = ?";
-    
-    Long siguiente = jdbcTemplate.queryForObject(sql, Long.class, tipo);
-    return siguiente != null ? siguiente : 1L;
-}
-    /*
-    public void guardar(
-            NotaDTO dto,
-            String usuario,
-            String sesion) {
 
-        jdbcTemplate.update(
-                "EXEC dbo.sp_NotasCreditoDebito_Guardar ?,?,?,?,?,?,?",
-                dto.getNotaId(),
-                dto.getCodigo(),
-                dto.getFacturaId(),
-                dto.getTipo(),
-                dto.getMotivo(),
-                usuario,
-                sesion);
-    }*/
-      public List<Map<String, Object>> eliminar() {
+    public long obtenerSiguienteSecuencial(String tipo) {
+
+        String sql = "SELECT ISNULL(" +
+                "MAX(TRY_CAST(RIGHT(Codigo, 10) AS BIGINT)), " +
+                "0) + 1 " +
+                "FROM dbo.NotasCreditoDebito " +
+                "WHERE Tipo = ?";
+
+        Long siguiente = jdbcTemplate.queryForObject(
+                sql, Long.class, tipo);
+
+        return siguiente != null ? siguiente : 1L;
+    }
+
+    public List<Map<String, Object>> eliminar() {
         return jdbcTemplate.queryForList(
                 "EXEC dbo.sp_NotasCreditoDebito_Eliminar");
     }

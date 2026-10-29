@@ -1,3 +1,4 @@
+
 package cr.ac.ucr.paraiso.propi.dto;
 
 import java.math.BigDecimal;
@@ -11,6 +12,7 @@ public class NotaDTO {
     private String codigo;
     private Integer facturaId;
     private String tipo;
+    private String codigoMotivo;
     private String motivo;
 
     public Integer getNotaId() {
@@ -43,6 +45,16 @@ public class NotaDTO {
 
     public void setTipo(String tipo) {
         this.tipo = tipo;
+    }
+
+    // Obtener el código del motivo de Hacienda
+    public String getCodigoMotivo() {
+        return codigoMotivo;
+    }
+
+    // Asignar el código del motivo de Hacienda
+    public void setCodigoMotivo(String codigoMotivo) {
+        this.codigoMotivo = codigoMotivo;
     }
 
     public String getMotivo() {
