@@ -3,6 +3,7 @@ package cr.ac.ucr.paraiso.propi.business;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -61,8 +62,10 @@ public class AuthService {
                         }
 
                         // Registrar ingreso
-                        String sessionId = registrarIngreso(conexion);
-
+                        String sessionId = registrarIngreso(
+                                        conexion,
+                                        terminal,
+                                        ip);
                         // Crear JWT
                         List<String> roles = List.of(rol);
 
@@ -134,16 +137,29 @@ public class AuthService {
          *
          * Devuelve el ID de BitacoraAcceso.
          */
-        private String registrarIngreso(Connection conexion)
-                        throws SQLException {
 
-                String sql = "EXEC dbo.sp_RegistrarIngreso";
+        private String registrarIngreso(
+                        Connection conexion,
+                        String terminal,
+                        String ip) throws SQLException {
 
-                try (Statement consulta = conexion.createStatement();
-                                ResultSet resultado = consulta.executeQuery(sql)) {
+                String sql = """
+                                EXEC dbo.sp_RegistrarIngreso
+                                    @NombreTerminal = ?,
+                                    @DireccionIP = ?
+                                """;
 
-                        if (resultado.next()) {
-                                return resultado.getString("BitacoraAccesoID");
+                try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+
+                        ps.setString(1, terminal);
+                        ps.setString(2, ip);
+
+                        try (ResultSet resultado = ps.executeQuery()) {
+
+                                if (resultado.next()) {
+                                        return resultado.getString(
+                                                        "BitacoraAccesoID");
+                                }
                         }
                 }
 

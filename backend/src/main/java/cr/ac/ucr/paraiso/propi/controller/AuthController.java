@@ -37,6 +37,9 @@ public class AuthController {
                         HttpServletRequest servletRequest) {
 
                 String terminal = servletRequest.getHeader("User-Agent");
+                if (terminal == null || terminal.isBlank()) {
+                        terminal = "Cliente web";
+                }
                 String ip = servletRequest.getRemoteAddr();
 
                 AuthResponseDTO respuesta = authService.login(
