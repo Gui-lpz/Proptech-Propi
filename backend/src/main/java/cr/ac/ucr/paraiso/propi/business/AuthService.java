@@ -9,6 +9,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -20,14 +22,17 @@ import cr.ac.ucr.paraiso.propi.security.JwtTokenProvider;
 @Service
 public class AuthService {
 
+        private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
         private final JwtTokenProvider jwtTokenProvider;
         private final JdbcTemplate jdbcTemplate;
 
-        // Dirección SQL Server de application.properties
+        // Direccion SQL Server de application.properties
         @Value("${spring.datasource.url}")
         private String url;
 
-        // Constructor
+        /* CONSTRUCTOR */
+
         public AuthService(
                         JwtTokenProvider jwtTokenProvider,
                         JdbcTemplate jdbcTemplate) {
@@ -37,36 +42,63 @@ public class AuthService {
         }
 
         /*
-         * REQ 003: INICIO DE SESIÓN
+         * REQ 003: INICIO DE SESION
          *
          * SQL Server valida las credenciales.
          * Se registra el ingreso en BitacoraAcceso.
-         * Se genera un token JWT para el frontend.
+         * Se genera un token JWT.
          */
+
         public AuthResponseDTO login(
                         AuthRequestDTO request,
                         String terminal,
                         String ip) {
+
+                if (request == null ||
+                                request.getUsername() == null ||
+                                request.getUsername().isBlank() ||
+                                request.getPassword() == null ||
+                                request.getPassword().isBlank()) {
+
+                        throw new IllegalArgumentException(
+                                        "Debe proporcionar usuario y contraseña.");
+                }
+
+                String etapa = "Conexion SQL Server";
 
                 try (Connection conexion = DriverManager.getConnection(
                                 url,
                                 request.getUsername(),
                                 request.getPassword())) {
 
-                        // Consultar rol del usuario
+                        log.info("Conexion SQL establecida para usuario {}",
+                                        request.getUsername());
+
+                        // 1. Consultar rol del usuario.
+                        etapa = "Consultar rol";
+
                         String rol = obtenerRol(conexion);
 
                         if (rol == null) {
-                                throw new RuntimeException(
+                                throw new SecurityException(
                                                 "El usuario no tiene un rol autorizado.");
                         }
 
-                        // Registrar ingreso
+                        log.info("Rol identificado: {}", rol);
+
+                        // 2. Registrar ingreso.
+                        etapa = "Registrar ingreso en BitacoraAcceso";
+
                         String sessionId = registrarIngreso(
                                         conexion,
                                         terminal,
                                         ip);
-                        // Crear JWT
+
+                        log.info("Ingreso registrado correctamente.");
+
+                        // 3. Generar JWT.
+                        etapa = "Generar JWT";
+
                         List<String> roles = List.of(rol);
 
                         String token = jwtTokenProvider.generateToken(
@@ -83,20 +115,26 @@ public class AuthService {
 
                 } catch (SQLException error) {
 
+                        log.error(
+                                        "ERROR SQL durante login. Etapa: {}. " +
+                                                        "Codigo SQL: {}. SQLState: {}. Detalle: {}",
+                                        etapa,
+                                        error.getErrorCode(),
+                                        error.getSQLState(),
+                                        error.getMessage(),
+                                        error);
+
                         throw new RuntimeException(
-                                        "No fue posible autenticar con SQL Server. "
-                                                        + "Verifica las credenciales y la conexión.");
+                                        "No fue posible autenticar con SQL Server. " +
+                                                        "Verifica las credenciales y la conexión.",
+                                        error);
                 }
         }
 
         /*
          * REQ 004: OBTENER ROL
-         *
-         * SQL Server devuelve 1 cuando el usuario
-         * pertenece al rol indicado.
-         *
-         * Los nombres ROLE_ coinciden con app.js.
          */
+
         private String obtenerRol(Connection conexion)
                         throws SQLException {
 
@@ -132,10 +170,7 @@ public class AuthService {
         /*
          * REQ 003: REGISTRAR INGRESO
          *
-         * Ejecuta sp_RegistrarIngreso con la
-         * identidad SQL del usuario autenticado.
-         *
-         * Devuelve el ID de BitacoraAcceso.
+         * Utiliza la identidad SQL autenticada.
          */
 
         private String registrarIngreso(
@@ -157,6 +192,7 @@ public class AuthService {
                         try (ResultSet resultado = ps.executeQuery()) {
 
                                 if (resultado.next()) {
+
                                         return resultado.getString(
                                                         "BitacoraAccesoID");
                                 }
@@ -170,17 +206,16 @@ public class AuthService {
         /*
          * REQ 003: REGISTRAR SALIDA
          *
-         * El usuario debe provenir del JWT validado,
-         * no de un campo editable del frontend.
-         *
-         * El procedimiento comprueba el usuario
-         * y el ID antes de cerrar la sesión.
+         * El usuario proviene del JWT validado.
          */
+
         public void cerrarSesion(
                         String usuario,
                         String sessionId) {
 
-                if (sessionId == null || sessionId.isBlank()) {
+                if (sessionId == null ||
+                                sessionId.isBlank()) {
+
                         throw new IllegalArgumentException(
                                         "Identificador de sesión inválido.");
                 }

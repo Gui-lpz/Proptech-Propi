@@ -979,62 +979,182 @@ document.getElementById("btnCancelarCliente").addEventListener(
 );
 
 
-/* CRUD CABYS*/
+/* CRUD CABYS */
 
 let cabysCache = [];
 
-async function cargarCabysCrud() {
-    try {
-        const data = await api("/cabys");
 
-        cabysCache =
-            Array.isArray(data)
-                ? data
+/*  CARGAR CODIGOS CABYS DESDE SQL SERVER */
+
+async function cargarCabysCrud() {
+
+    const tabla = document.getElementById("tablaCabysCrud");
+
+    if (!tabla) {
+        console.error(
+            "No se encontro el elemento tablaCabysCrud."
+        );
+        return;
+    }
+
+    try {
+
+        // Consultar los CABYS desde el backend.
+        const respuesta = await api("/cabys");
+
+        const data = Array.isArray(respuesta)
+            ? respuesta
+            : [];
+
+        // Conservar todos los CABYS recibidos.
+        cabysCache = data;
+
+        // Filtrar los CABYS activos.
+        const cabysActivos = data.filter(item => {
+
+            const estado = String(
+                valor(item, "estado", "Estado") ?? ""
+            ).trim().toUpperCase();
+
+            return estado === "A";
+        });
+
+        // Mensajes para verificar funcionamiento.
+        console.log(
+            "Total CABYS recibidos:",
+            data.length
+        );
+
+        console.log(
+            "Total CABYS activos:",
+            cabysActivos.length
+        );
+
+        // Construir la tabla solamente con CABYS activos.
+        tabla.innerHTML = crearTablaConAcciones(
+            cabysActivos,
+            [
+                ["cabysId", "ID"],
+                ["codigoCABYS", "Código CABYS"],
+                ["descripcion", "Descripción"],
+                ["estado", "Estado"]
+            ],
+            "editarCabys",
+            "eliminarCabys",
+            ["cabysId", "CabysID"],
+            esAdmin,
+            esAdmin
+        );
+
+        // Cargar solamente CABYS activos en el selector
+        // utilizado por productos y servicios.
+        cargarCabysSelect(cabysActivos);
+
+        console.log(
+            "Tabla CABYS actualizada correctamente."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Error al cargar CABYS:",
+            error
+        );
+
+        tabla.innerHTML = "";
+
+        // Si falla /cabys, intentar obtener el catalogo
+        // necesario para productos y servicios.
+        try {
+
+            const respuestaCatalogo =
+                await api("/catalogos/cabys");
+
+            const catalogo = Array.isArray(respuestaCatalogo)
+                ? respuestaCatalogo
                 : [];
 
-        document.getElementById("tablaCabysCrud").innerHTML =
-            crearTablaConAcciones(
-                data,
-                [
-                    ["cabysId", "ID"],
-                    ["codigoCABYS", "Código CABYS"],
-                    ["descripcion", "Descripción"],
-                    ["estado", "Estado"]
-                ],
-                "editarCabys",
-                "eliminarCabys",
-                ["cabysId", "CabysID"],
-                esAdmin,
-                esAdmin
+            const activos = catalogo.filter(item => {
+
+                const estado = String(
+                    valor(item, "estado", "Estado") ?? "A"
+                ).trim().toUpperCase();
+
+                return estado === "A";
+            });
+
+            cargarCabysSelect(activos);
+
+        } catch (errorCatalogo) {
+
+            console.error(
+                "Error al cargar catalogo CABYS:",
+                errorCatalogo
             );
 
-        cargarCabysSelect(data);
-    } catch (error) {
-        document.getElementById("tablaCabysCrud").innerHTML = "";
+            const selectCabys =
+                document.getElementById("cabysId");
 
-        /* Si todavía no existe /api/cabys, probamos el endpoint
-           de catálogo que ya habíamos definido. */
-        try {
-            const data = await api("/catalogos/cabys");
-            cargarCabysSelect(data);
-        } catch {
-            ponerOpciones(
-                document.getElementById("cabysId"),
-                [],
-                () => "",
-                () => "",
-                "No disponible"
-            );
+            if (selectCabys) {
+
+                ponerOpciones(
+                    selectCabys,
+                    [],
+                    () => "",
+                    () => "",
+                    "No disponible"
+                );
+            }
         }
+
+        mostrarMensaje(
+            "No fue posible cargar la tabla CABYS: " +
+            error.message,
+            "error"
+        );
     }
 }
 
+
+/*  CARGAR SELECT DE CABYS */
+
 function cargarCabysSelect(data) {
+
+    const selectCabys =
+        document.getElementById("cabysId");
+
+    if (!selectCabys) {
+        console.warn(
+            "No se encontro el selector cabysId."
+        );
+        return;
+    }
+
+    // Mostrar solamente los activos cuando el estado
+    // este incluido en la respuesta.
+    const activos = (Array.isArray(data) ? data : [])
+        .filter(item => {
+
+            const estado = String(
+                valor(item, "estado", "Estado") ?? "A"
+            ).trim().toUpperCase();
+
+            return estado === "A";
+        });
+
     ponerOpciones(
-        document.getElementById("cabysId"),
-        data || [],
-        item => valor(item, "codigoCABYS", "codigoCabys", "CodigoCABYS"),
+        selectCabys,
+        activos,
+
+        item => valor(
+            item,
+            "codigoCABYS",
+            "codigoCabys",
+            "CodigoCABYS"
+        ),
+
         item => {
+
             const codigo = valor(
                 item,
                 "codigoCABYS",
@@ -1050,35 +1170,83 @@ function cargarCabysSelect(data) {
 
             return `${codigo} - ${descripcion}`;
         },
+
         "Seleccione código CABYS..."
     );
 }
 
+
+/* CREAR O ACTUALIZAR CABYS*/
+
 document.getElementById("cabysForm").addEventListener(
     "submit",
+
     async event => {
+
         event.preventDefault();
 
+        // Validar que el usuario sea Administrador.
         if (!esAdmin) {
+
             mostrarMensaje(
                 "Solo el administrador puede modificar CABYS.",
                 "error"
             );
+
             return;
         }
 
-        const id = document.getElementById("cabysCrudId").value;
+        // Obtener ID si se esta editando.
+        const id = document
+            .getElementById("cabysCrudId")
+            .value
+            .trim();
 
+        // Construir DTO para el backend.
         const dto = {
-            codigoCABYS:
-                document.getElementById("codigoCabysCrud").value.trim(),
-            descripcion:
-                document.getElementById("descripcionCabysCrud").value.trim(),
-            estado:
-                document.getElementById("estadoCabysCrud").value
+
+            codigoCABYS: document
+                .getElementById("codigoCabysCrud")
+                .value
+                .trim(),
+
+            descripcion: document
+                .getElementById("descripcionCabysCrud")
+                .value
+                .trim(),
+
+            estado: document
+                .getElementById("estadoCabysCrud")
+                .value
         };
 
+        // Validar campos obligatorios.
+        if (!dto.codigoCABYS || !dto.descripcion) {
+
+            mostrarMensaje(
+                "Debe completar el código CABYS " +
+                "y la descripción.",
+                "error"
+            );
+
+            return;
+        }
+
+        // Validar estado.
+        if (!["A", "I"].includes(dto.estado)) {
+
+            mostrarMensaje(
+                "Debe seleccionar un estado válido.",
+                "error"
+            );
+
+            return;
+        }
+
         try {
+
+            // POST si es nuevo.
+            // PUT si ya tiene ID.
             await api(
                 id ? `/cabys/${id}` : "/cabys",
                 {
@@ -1087,92 +1255,250 @@ document.getElementById("cabysForm").addEventListener(
                 }
             );
 
-            limpiarCabys();
+            // Actualizar la tabla desde SQL Server.
             await cargarCabysCrud();
+
+            // Limpiar formulario.
+            limpiarCabys();
 
             mostrarMensaje(
                 id
-                    ? "CABYS modificado correctamente."
+                    ? "CABYS actualizado correctamente."
                     : "CABYS registrado correctamente.",
                 "exito"
             );
+
         } catch (error) {
-            mostrarMensaje(error.message, "error");
+
+            console.error(
+                "Error al guardar CABYS:",
+                error
+            );
+
+            mostrarMensaje(
+                error.message,
+                "error"
+            );
         }
     }
 );
 
+
+/*  BUSCAR CABYS POR ID PARA EDICION */
+
 function editarCabysPorId(id) {
 
-    const item =
-        cabysCache.find(
-            cabys =>
-                Number(
-                    valor(
-                        cabys,
-                        "cabysId",
-                        "CabysID"
-                    )
-                ) === Number(id)
+    const item = cabysCache.find(cabys => {
+
+        const cabysId = Number(
+            valor(
+                cabys,
+                "cabysId",
+                "CabysID"
+            )
         );
 
-    if (item) {
-        editarCabys(item);
+        return cabysId === Number(id);
+    });
+
+    if (!item) {
+
+        mostrarMensaje(
+            "No se encontró el CABYS seleccionado.",
+            "error"
+        );
+
+        return;
     }
+
+    editarCabys(item);
 }
 
+
+/*  EDITAR CABYS */
 
 function editarCabys(item) {
 
     if (!esAdmin) {
+
+        mostrarMensaje(
+            "Solo el administrador puede editar CABYS.",
+            "error"
+        );
+
         return;
     }
 
+    // ID del registro.
     document.getElementById("cabysCrudId").value =
-        valor(item, "cabysId", "CabysID");
+        valor(
+            item,
+            "cabysId",
+            "CabysID"
+        );
 
+    // Codigo CABYS.
     document.getElementById("codigoCabysCrud").value =
-        valor(item, "codigoCABYS", "codigoCabys", "CodigoCABYS");
+        valor(
+            item,
+            "codigoCABYS",
+            "codigoCabys",
+            "CodigoCABYS"
+        );
 
+    // Descripcion.
     document.getElementById("descripcionCabysCrud").value =
-        valor(item, "descripcion", "Descripcion");
+        valor(
+            item,
+            "descripcion",
+            "Descripcion"
+        );
 
+    // Estado.
     document.getElementById("estadoCabysCrud").value =
-        valor(item, "estado", "Estado") || "A";
+        String(
+            valor(item, "estado", "Estado") ?? "A"
+        ).trim().toUpperCase();
 }
+
+
+/*  ELIMINAR / DESACTIVAR CABYS */
 
 async function eliminarCabys(id) {
 
+    // Validar rol.
     if (!esAdmin) {
+
         mostrarMensaje(
-            "Solo el administrador puede eliminar CABYS.",
+            "Solo el administrador puede desactivar CABYS.",
             "error"
         );
+
         return;
     }
 
-    if (!confirm("¿Desea eliminar este código CABYS?")) {
+    // Buscar registro.
+    const item = cabysCache.find(cabys => {
+
+        const cabysId = Number(
+            valor(
+                cabys,
+                "cabysId",
+                "CabysID"
+            )
+        );
+
+        return cabysId === Number(id);
+    });
+
+    if (!item) {
+
+        mostrarMensaje(
+            "No se encontró el código CABYS seleccionado.",
+            "error"
+        );
+
+        return;
+    }
+
+    // Obtener estado.
+    const estado = String(
+        valor(item, "estado", "Estado") ?? ""
+    ).trim().toUpperCase();
+
+    // Evitar desactivar registros ya inactivos.
+    if (estado !== "A") {
+
+        mostrarMensaje(
+            "Este código CABYS ya está inactivo.",
+            "error"
+        );
+
+        return;
+    }
+
+    // Obtener codigo.
+    const codigo = valor(
+        item,
+        "codigoCABYS",
+        "codigoCabys",
+        "CodigoCABYS"
+    );
+
+    // Solicitar confirmacion.
+    const confirmar = confirm(
+        `¿Desea desactivar el código CABYS ${codigo}?`
+    );
+
+    if (!confirmar) {
         return;
     }
 
     try {
-        await api(`/cabys/${id}`, { method: "DELETE" });
+
+        // Llamar al endpoint DELETE del backend.
+        await api(
+            `/cabys/${id}`,
+            {
+                method: "DELETE"
+            }
+        );
+
+        // El backend cambia el estado de A a I.
+        // Recargar desde SQL Server.
         await cargarCabysCrud();
-        mostrarMensaje("CABYS eliminado correctamente.", "exito");
+
+        // Limpiar formulario.
+        limpiarCabys();
+
+        mostrarMensaje(
+            "CABYS desactivado correctamente.",
+            "exito"
+        );
+
     } catch (error) {
-        mostrarMensaje(error.message, "error");
+
+        console.error(
+            "Error al desactivar CABYS:",
+            error
+        );
+
+        mostrarMensaje(
+            error.message,
+            "error"
+        );
     }
 }
 
+
+/* LIMPIAR FORMULARIO*/
+
 function limpiarCabys() {
-    document.getElementById("cabysForm").reset();
+
+    const formulario =
+        document.getElementById("cabysForm");
+
+    if (formulario) {
+        formulario.reset();
+    }
+
     document.getElementById("cabysCrudId").value = "";
+
+    // Estado inicial para crear un nuevo CABYS.
+    document.getElementById("estadoCabysCrud").value = "A";
 }
 
-document.getElementById("btnCancelarCabys").addEventListener(
-    "click",
-    limpiarCabys
-);
+
+/*  BOTON CANCELAR*/
+
+document.getElementById("btnCancelarCabys")
+    .addEventListener(
+        "click",
+        limpiarCabys
+    );
+
+
+
 
 
 /* CRUD PRODUCTOS / SERVICIOS */
@@ -1803,6 +2129,11 @@ function quitarDetalle(indice) {
 
 obtenerCobro("facturaForm").addEventListener("submit", async event => {
     event.preventDefault();
+    console.log("Procesando factura...");
+    console.log("Rol administrador:", esAdmin);
+    console.log("Rol digitador:", esDigitador);
+    console.log("Detalles agregados:", detalles);
+console.log("Medio de pago:", obtenerCobro("medioPago").value);
     if (registrandoCobro) return;
     if (!esAdmin && !esDigitador) {
         mostrarMensaje("Este usuario es solo de consulta.", "error");
@@ -1961,19 +2292,225 @@ obtenerCobro("btnCancelarFactura").addEventListener("click", () => {
     limpiarMensaje();
 });
 
+
+
+/*  BOTONES DE ACCIONES PARA FACTURAS*/
+
+function agregarAccionesEliminar(
+    idContenedor,
+    registros,
+    camposId,
+    funcionEliminar,
+    funcionEditar = null
+) {
+
+    const contenedor =
+        document.getElementById(idContenedor);
+
+    if (!contenedor) {
+        console.error("No existe:", idContenedor);
+        return;
+    }
+
+    if (!esAdmin) {
+        return;
+    }
+
+    const tabla = contenedor.querySelector("table");
+
+    if (!tabla) {
+        console.error(
+            "crearTabla() no generó una tabla HTML.",
+            idContenedor
+        );
+        return;
+    }
+
+    const filas = Array.from(
+        tabla.querySelectorAll("tr")
+    ).filter(fila => fila.querySelector("td"));
+
+    const encabezado =
+        tabla.querySelector("thead tr") ||
+        Array.from(tabla.querySelectorAll("tr"))
+            .find(fila => fila.querySelector("th"));
+
+    if (encabezado) {
+        const th = document.createElement("th");
+        th.textContent = "Acciones";
+        encabezado.appendChild(th);
+    }
+
+    filas.forEach((fila, indice) => {
+
+        const registro = registros[indice];
+
+        if (!registro) {
+            return;
+        }
+
+        const id = valor(registro, ...camposId);
+
+        const celda = document.createElement("td");
+        celda.style.whiteSpace = "nowrap";
+
+        if (id == null || id === "") {
+            fila.appendChild(celda);
+            return;
+        }
+
+        // EDITAR: solo se habilita cuando la función
+        // de edición esté realmente implementada.
+        const btnEditar = document.createElement("button");
+
+        btnEditar.type = "button";
+        btnEditar.textContent = "Editar";
+        btnEditar.className = "btn-editar";
+
+        if (typeof funcionEditar === "function") {
+            btnEditar.addEventListener(
+                "click",
+                () => funcionEditar(id)
+            );
+        } else {
+            btnEditar.disabled = true;
+            btnEditar.title =
+                "La actualización completa de facturas " +
+                "todavía no está implementada.";
+        }
+
+        // ELIMINAR
+        const btnEliminar = document.createElement("button");
+
+        btnEliminar.type = "button";
+        btnEliminar.textContent = "Eliminar";
+        btnEliminar.className = "btn-eliminar";
+
+        btnEliminar.addEventListener("click", async () => {
+
+            btnEliminar.disabled = true;
+
+            try {
+                await funcionEliminar(id);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                btnEliminar.disabled = false;
+            }
+        });
+
+        celda.appendChild(btnEditar);
+        celda.appendChild(document.createTextNode(" "));
+        celda.appendChild(btnEliminar);
+
+        fila.appendChild(celda);
+    });
+}
+
+
 /* CONSULTAR FACTURAS */
 
+
+/*  CONSULTAR FACTURAS CON BOTON ELIMINAR */
+
 async function cargarFacturas() {
+
     try {
-        const data = await api("/facturas");
+
+        const respuesta = await api("/facturas");
+
+        const data = Array.isArray(respuesta)
+            ? respuesta
+            : [];
+
+        // Mantener el selector de facturas para notas.
         cargarFacturasNota(data);
+
+        // Crear tabla de facturas.
         obtenerCobro("tablaFacturas").innerHTML =
             crearTabla(data);
+
+        // Agregar botones solo al Administrador.
+        agregarAccionesEliminar(
+            "tablaFacturas",
+            data,
+            ["facturaId", "FacturaID"],
+            eliminarFactura
+        );
+
     } catch (error) {
-        console.error("Error al cargar facturas:", error);
+
+        console.error(
+            "Error al cargar facturas:",
+            error
+        );
+
         obtenerCobro("tablaFacturas").innerHTML = "";
+
+        mostrarMensaje(
+            error.message,
+            "error"
+        );
     }
 }
+
+
+/* ELIMINAR FACTURA - SOLO ADMINISTRADOR */
+
+async function eliminarFactura(id) {
+
+    if (!esAdmin) {
+
+        mostrarMensaje(
+            "Solo el administrador puede eliminar facturas.",
+            "error"
+        );
+
+        return;
+    }
+
+    const confirmar = confirm(
+        `¿Está seguro de eliminar permanentemente ` +
+        `la factura #${id}?\n\n` +
+        `Esta operación no se puede deshacer.`
+    );
+
+    if (!confirmar) {
+        return;
+    }
+
+    try {
+
+        // Requiere DELETE /api/facturas/{id}
+        // implementado en Spring Boot.
+        await api(`/facturas/${id}`, {
+            method: "DELETE"
+        });
+
+        await cargarFacturas();
+
+        mostrarMensaje(
+            `Factura #${id} eliminada correctamente.`,
+            "exito"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Error al eliminar factura:",
+            error
+        );
+
+        mostrarMensaje(
+            "No fue posible eliminar la factura. " +
+            "Verifique si tiene detalles o notas " +
+            "relacionadas. " +
+            error.message,
+            "error"
+        );
+    }
+}
+
 
 
 
@@ -2152,23 +2689,198 @@ function obtenerFechaLocalNota() {
     return `${anio}-${mes}-${dia}`;
 }
 
-// Mostrar notas
-async function cargarNotas() {
-    try {
-        const data = await api("/notas");
 
-        document.getElementById("tablaNotas").innerHTML =
-            crearTabla(data);
+/* CONSULTAR NOTAS CON BOTONES EDITAR Y ELIMINAR */
+
+let notasCache = [];
+let notaEdicionId = null;
+
+async function cargarNotas() {
+
+    const contenedor =
+        document.getElementById("tablaNotas");
+
+    try {
+
+        const respuesta = await api("/notas");
+
+        const data = Array.isArray(respuesta)
+            ? respuesta
+            : [];
+
+        notasCache = data;
+
+        // Conservar tu tabla original.
+        contenedor.innerHTML = crearTabla(data);
+
+        // Solo el Administrador tiene estas acciones.
+        if (!esAdmin) {
+            return;
+        }
+
+        const tabla = contenedor.querySelector("table");
+
+        if (!tabla) {
+            console.error(
+                "No se encontró la tabla HTML de notas."
+            );
+            return;
+        }
+
+        // Agregar encabezado.
+        const encabezado = tabla.querySelector("thead tr")
+            || Array.from(tabla.querySelectorAll("tr"))
+                .find(fila => fila.querySelector("th"));
+
+        if (encabezado) {
+
+            const th = document.createElement("th");
+            th.textContent = "Acciones";
+            encabezado.appendChild(th);
+        }
+
+        // Obtener filas de datos.
+        const filas = Array.from(
+            tabla.querySelectorAll("tr")
+        ).filter(fila => fila.querySelector("td"));
+
+        filas.forEach((fila, indice) => {
+
+            const nota = data[indice];
+
+            if (!nota) {
+                return;
+            }
+
+            const id = valor(
+                nota,
+                "notaId",
+                "NotaID"
+            );
+
+            const celda = document.createElement("td");
+
+            if (id === null || id === undefined) {
+                fila.appendChild(celda);
+                return;
+            }
+
+            // Botón editar.
+            const btnEditar = document.createElement("button");
+
+            btnEditar.type = "button";
+            btnEditar.textContent = "Editar";
+            btnEditar.className = "btn-editar";
+
+            btnEditar.addEventListener("click", () => {
+                editarNota(id);
+            });
+
+            // Botón eliminar.
+            const btnEliminar = document.createElement("button");
+
+            btnEliminar.type = "button";
+            btnEliminar.textContent = "Eliminar";
+            btnEliminar.className = "btn-eliminar";
+
+            btnEliminar.addEventListener(
+                "click",
+                async () => {
+
+                    btnEliminar.disabled = true;
+
+                    try {
+                        await eliminarNota(id);
+                    } finally {
+                        btnEliminar.disabled = false;
+                    }
+                }
+            );
+
+            celda.style.whiteSpace = "nowrap";
+            celda.appendChild(btnEditar);
+            celda.appendChild(document.createTextNode(" "));
+            celda.appendChild(btnEliminar);
+
+            fila.appendChild(celda);
+        });
+
+        console.log(
+            "Notas cargadas:",
+            notasCache.length
+        );
 
     } catch (error) {
-        document.getElementById("tablaNotas").innerHTML = "";
+
+        console.error("Error al cargar notas:", error);
+
+        contenedor.innerHTML = "";
 
         mostrarMensaje(
-            error.message || "No se pudieron cargar las notas.",
+            error.message ||
+            "No se pudieron cargar las notas.",
             "error"
         );
     }
 }
+
+
+
+/* ELIMINAR NOTA DE CREDITO / DEBITO
+   SOLO ADMINISTRADOR */
+
+async function eliminarNota(id) {
+
+    if (!esAdmin) {
+
+        mostrarMensaje(
+            "Solo el administrador puede eliminar notas.",
+            "error"
+        );
+
+        return;
+    }
+
+    const confirmar = confirm(
+        `¿Está seguro de eliminar permanentemente ` +
+        `la nota #${id}?\n\n` +
+        `Esta operación no se puede deshacer.`
+    );
+
+    if (!confirmar) {
+        return;
+    }
+
+    try {
+
+        // Requiere DELETE /api/notas/{id}
+        // implementado en Spring Boot.
+        await api(`/notas/${id}`, {
+            method: "DELETE"
+        });
+
+        await cargarNotas();
+
+        mostrarMensaje(
+            `Nota #${id} eliminada correctamente.`,
+            "exito"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Error al eliminar nota:",
+            error
+        );
+
+        mostrarMensaje(
+            "No fue posible eliminar la nota. " +
+            error.message,
+            "error"
+        );
+    }
+}
+
 
 // Inicializar los campos
 actualizarOpcionesMotivo();

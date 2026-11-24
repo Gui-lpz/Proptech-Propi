@@ -14,14 +14,26 @@ public class NotaRepository {
 
     private final JdbcTemplate jdbcTemplate;
 
+    /* CONSTRUCTOR */
+
     public NotaRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /* LISTAR NOTAS DE CREDITO / DEBITO */
+
     public List<Map<String, Object>> listar() {
+
         return jdbcTemplate.queryForList(
                 "EXEC dbo.sp_NotasCreditoDebito_Listar");
     }
+
+    /*
+     * GUARDAR O ACTUALIZAR NOTA
+     * 
+     * Procedimiento:
+     * dbo.sp_NotasCreditoDebito_Guardar
+     */
 
     public void guardar(NotaDTO dto) {
 
@@ -50,6 +62,12 @@ public class NotaRepository {
         dto.setNotaId(notaIdGenerado);
     }
 
+    /*
+     * 3. OBTENER SIGUIENTE NUMERO SECUENCIAL
+     * 
+     * Se utiliza para generar el codigo de Hacienda.
+     */
+
     public long obtenerSiguienteSecuencial(String tipo) {
 
         String sql = "SELECT ISNULL(" +
@@ -59,13 +77,30 @@ public class NotaRepository {
                 "WHERE Tipo = ?";
 
         Long siguiente = jdbcTemplate.queryForObject(
-                sql, Long.class, tipo);
+                sql,
+                Long.class,
+                tipo);
 
         return siguiente != null ? siguiente : 1L;
     }
 
-    public List<Map<String, Object>> eliminar() {
-        return jdbcTemplate.queryForList(
-                "EXEC dbo.sp_NotasCreditoDebito_Eliminar");
+    /*
+     * ELIMINAR NOTA DE CREDITO / DEBITO
+     * 
+     * Procedimiento:
+     * dbo.sp_NotasCreditoDebito_Eliminar
+     */
+
+    public void eliminar(Integer notaId) {
+
+        if (notaId == null || notaId <= 0) {
+
+            throw new IllegalArgumentException(
+                    "Debe proporcionar un NotaID valido.");
+        }
+
+        jdbcTemplate.update(
+                "EXEC dbo.sp_NotasCreditoDebito_Eliminar @NotaID = ?",
+                notaId);
     }
 }
